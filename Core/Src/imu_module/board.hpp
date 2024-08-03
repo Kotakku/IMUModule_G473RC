@@ -8,8 +8,12 @@
 #include "stmbed/ticker.hpp"
 #include "stmbed/uart.hpp"
 
+#include "spi_slave.hpp"
+
 extern UART_HandleTypeDef huart2; // VCP
 extern TIM_HandleTypeDef htim16;  // 1khz
+
+extern SPI_HandleTypeDef hspi1;
 
 namespace imu_module {
 
@@ -78,7 +82,10 @@ public:
     LSM6DSRArray32 imu{imu_mosi, imu_misos, imu_clk, imu_cs};
     IMUFusion imu_fusion{imu, 0.001};
 
-    DigitalOut tp{PA6};
+    // DigitalOut tp{PA8};
+
+    SPISlave spi_slave{&hspi1};
+    DigitalIn spi_cs{PA4};
 };
 
 } // namespace imu_module

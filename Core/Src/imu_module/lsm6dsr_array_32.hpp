@@ -1,8 +1,8 @@
 #pragma once
 
-#include "cpp_robotics/vector/vector3.hpp"
 #include "stmbed/digital_in.hpp"
 #include "stmbed/digital_out.hpp"
+#include <Eigen/Dense>
 #include <array>
 #include <cstring>
 
@@ -32,17 +32,15 @@ typedef enum { LSM6DSR_GYRO_HIGH_PERFORMANCE_MODE, LSM6DSR_GYRO_LOW_POWER_NORMAL
 
 /* Class Declaration ---------------------------------------------------------*/
 
-// #define DEBUG_PA4(x) debug_pa4 = x
-// #define DEBUG_PA5(x) debug_pa5 = x
-
 #define BIT_READ_SHIFT(miso_pin_configs, i)                                                                            \
     ((miso_pin_configs.data_ptr[i] & miso_pin_configs.pin_mask) << miso_pin_configs.left_shift[i])
+
+#define BIT_READ_SHIFT_TEST(i) ((data_ptr[i] & pin_mask) << 1)
 
 class LSM6DSRArray32 {
 public:
     using Scaler = float;
-    // template <typename T> using Vector3 = std::array<T, 3>;
-    using Vector3f = cpp_robotics::Vector3f;
+    using Vector3f = Eigen::Vector3f;
     constexpr static size_t NUM_SENSOR = 32;
 
     struct lsm6dst_data_t {
@@ -67,7 +65,7 @@ public:
         for (size_t i = 0; i < NUM_SENSOR; i++) {
             auto port = miso_pins_[i].get_port();
 
-            uint32_t *data_ptr;
+            uint32_t *data_ptr = nullptr;
             if (port == GPIOA) {
                 data_ptr = porta_reads_;
             } else if (port == GPIOB) {
@@ -76,7 +74,7 @@ public:
                 data_ptr = portc_reads_;
             }
 
-            uint32_t pin_num;
+            uint32_t pin_num = 0;
             for (size_t j = 0; j < 16; j++) {
                 if (miso_pins_[i].get_pin() & (1 << j)) {
                     pin_num = j;
@@ -85,7 +83,7 @@ public:
             }
 
             std::array<uint32_t, 8> left_shift;
-            for (size_t j = 0; j < 8; j++) {
+            for (uint32_t j = 0; j < 8; j++) {
                 left_shift[j] = (16 + 7 - j - pin_num);
             }
 
@@ -132,6 +130,9 @@ public:
     // debug
     std::array<lsm6dst_data_t, NUM_SENSOR> sensor_data() { return sensor_data_; }
 
+    // inline void set_debug_pa4(uint8_t value) { debug_pa4 = value; }
+    // inline void set_debug_pa5(uint8_t value) { debug_pa5 = value; }
+
 private:
     inline void set_cs(uint8_t value) { cs_pin_ = value; }
 
@@ -144,9 +145,11 @@ private:
         for (int i = 0; i < 8; i++) {
             mosi_pin_ = (src >> (7 - i)) & 1;
             clk_pin_ = 1;
-            software_spi_clk_wait(7);
+            // software_spi_clk_wait(7);
+            software_spi_clk_wait(1);
             clk_pin_ = 0;
-            software_spi_clk_wait(10);
+            // software_spi_clk_wait(10);
+            software_spi_clk_wait(1);
         }
     }
 
@@ -167,7 +170,7 @@ private:
         write_byte(addr);
 
         // read bytes
-        volatile uint16_t port_ins[3];
+        // volatile uint16_t port_ins[3];
         for (int b = 0; b < len; b++) {
             ////////////////////////////// 15us / per byte //////////////////////////////
             for (int i = 0; i < 8; i++) {
@@ -179,12 +182,11 @@ private:
                 portc_reads_[i] = GPIOC->IDR;
 
                 clk_pin_ = 0;
-                software_spi_clk_wait(3);
+                software_spi_clk_wait(1);
             }
 
-            // DEBUG_PA4(1);
             // 12us
-            for (int ch = 0; ch < NUM_SENSOR; ch++) {
+            for (size_t ch = 0; ch < NUM_SENSOR; ch++) {
                 uint32_t high_byte = 0;
                 high_byte |= BIT_READ_SHIFT(miso_pin_configs_[ch], 0);
                 high_byte |= BIT_READ_SHIFT(miso_pin_configs_[ch], 1);
@@ -196,7 +198,6 @@ private:
                 high_byte |= BIT_READ_SHIFT(miso_pin_configs_[ch], 7);
                 *(data[ch] + b) = static_cast<uint8_t>(high_byte >> 16);
             }
-            // DEBUG_PA4(0);
         }
 
         set_cs(1);
@@ -227,7 +228,7 @@ private:
     uint32_t portc_reads_[8];
     struct MisoPinConfig {
         uint32_t *data_ptr;
-        uint16_t pin_mask; // GPIO_PIN_0 ~ GPIO_PIN_15
+        uint32_t pin_mask; // GPIO_PIN_0 ~ GPIO_PIN_15
         std::array<uint32_t, 8> left_shift;
     };
     std::array<MisoPinConfig, NUM_SENSOR> miso_pin_configs_;
@@ -241,4 +242,6 @@ private:
 
     // stmbed::DigitalOut debug_pa4{stmbed::PA4};
     // stmbed::DigitalOut debug_pa5{stmbed::PA5};
+
+        uint8_t test_byte_;
 };

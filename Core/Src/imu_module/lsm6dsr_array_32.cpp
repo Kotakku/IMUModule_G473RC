@@ -53,7 +53,7 @@ LSM6DSRStatusTypeDef LSM6DSRArray32::begin() {
 
     /* Select default output data rate. */
     gyro_odr = LSM6DSR_GY_ODR_1667Hz;
-    // gyro_odr = LSM6DSR_GY_ODR_3333Hz;
+    gyro_odr = LSM6DSR_GY_ODR_6667Hz;
 
     /* Output data rate selection - power down. */
     if (gy_data_rate_set(LSM6DSR_GY_ODR_OFF) != LSM6DSR_OK) {
