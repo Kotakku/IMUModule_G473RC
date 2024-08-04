@@ -7,8 +7,7 @@
 #include "stmbed/stdio_support.hpp"
 #include "stmbed/ticker.hpp"
 #include "stmbed/uart.hpp"
-
-#include "spi_slave.hpp"
+#include "stmbed/spi_slave.hpp"
 
 extern UART_HandleTypeDef huart2; // VCP
 extern TIM_HandleTypeDef htim16;  // 2khz

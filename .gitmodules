@@ -1,0 +1,3 @@
+[submodule "Core/Inc/stmbed"]
+	path = Core/Inc/stmbed
+	url = https://github.com/Kotakku/stmbed
