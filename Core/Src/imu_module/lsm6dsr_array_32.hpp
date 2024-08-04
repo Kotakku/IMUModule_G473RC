@@ -35,8 +35,6 @@ typedef enum { LSM6DSR_GYRO_HIGH_PERFORMANCE_MODE, LSM6DSR_GYRO_LOW_POWER_NORMAL
 #define BIT_READ_SHIFT(miso_pin_configs, i)                                                                            \
     ((miso_pin_configs.data_ptr[i] & miso_pin_configs.pin_mask) << miso_pin_configs.left_shift[i])
 
-#define BIT_READ_SHIFT_TEST(i) ((data_ptr[i] & pin_mask) << 1)
-
 class LSM6DSRArray32 {
 public:
     using Scaler = float;
@@ -116,22 +114,19 @@ public:
     // Accelerometer
     LSM6DSRStatusTypeDef enable_acc();
     LSM6DSRStatusTypeDef update_acc_axes();
+    // Vector3f get_acc_axes(size_t index);
     Vector3f get_acc_axes(size_t index);
-    Vector3f get_acc_axes_raw(size_t index);
-    std::array<int16_t, 3> get_acc_axes_raw_bits(size_t index);
+    std::array<int16_t, 3> get_acc_axes_raw(size_t index);
 
     // Gyroscope
     LSM6DSRStatusTypeDef enable_gyro();
     LSM6DSRStatusTypeDef update_gyro_axes();
+    // Vector3f get_gyro_axes(size_t index);
     Vector3f get_gyro_axes(size_t index);
-    Vector3f get_gyro_axes_raw(size_t index);
-    std::array<int16_t, 3> get_gyro_axes_raw_bits(size_t index);
+    std::array<int16_t, 3> get_gyro_axes_raw(size_t index);
 
     // debug
     std::array<lsm6dst_data_t, NUM_SENSOR> sensor_data() { return sensor_data_; }
-
-    // inline void set_debug_pa4(uint8_t value) { debug_pa4 = value; }
-    // inline void set_debug_pa5(uint8_t value) { debug_pa5 = value; }
 
 private:
     inline void set_cs(uint8_t value) { cs_pin_ = value; }
@@ -145,10 +140,8 @@ private:
         for (int i = 0; i < 8; i++) {
             mosi_pin_ = (src >> (7 - i)) & 1;
             clk_pin_ = 1;
-            // software_spi_clk_wait(7);
             software_spi_clk_wait(1);
             clk_pin_ = 0;
-            // software_spi_clk_wait(10);
             software_spi_clk_wait(1);
         }
     }
@@ -170,7 +163,6 @@ private:
         write_byte(addr);
 
         // read bytes
-        // volatile uint16_t port_ins[3];
         for (int b = 0; b < len; b++) {
             ////////////////////////////// 15us / per byte //////////////////////////////
             for (int i = 0; i < 8; i++) {
@@ -239,9 +231,4 @@ private:
     lsm6dsr_odr_g_t gyro_odr;
     bool is_acc_enabled_ = false;
     bool is_gyro_enabled_ = false;
-
-    // stmbed::DigitalOut debug_pa4{stmbed::PA4};
-    // stmbed::DigitalOut debug_pa5{stmbed::PA5};
-
-        uint8_t test_byte_;
 };

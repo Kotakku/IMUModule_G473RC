@@ -52,8 +52,7 @@ LSM6DSRStatusTypeDef LSM6DSRArray32::begin() {
     }
 
     /* Select default output data rate. */
-    gyro_odr = LSM6DSR_GY_ODR_1667Hz;
-    gyro_odr = LSM6DSR_GY_ODR_6667Hz;
+    gyro_odr = LSM6DSR_GY_ODR_3333Hz;
 
     /* Output data rate selection - power down. */
     if (gy_data_rate_set(LSM6DSR_GY_ODR_OFF) != LSM6DSR_OK) {
@@ -66,10 +65,6 @@ LSM6DSRStatusTypeDef LSM6DSRArray32::begin() {
     }
 
     // enable gyro LPF1
-    if (gy_filter_lp1_set(PROPERTY_DISABLE) != LSM6DSR_OK) {
-        return LSM6DSR_ERROR;
-    }
-
     if (gy_filter_lp1_set(PROPERTY_ENABLE) != LSM6DSR_OK) {
         return LSM6DSR_ERROR;
     }
@@ -108,7 +103,6 @@ LSM6DSRStatusTypeDef LSM6DSRArray32::who_am_i(std::array<uint8_t, NUM_SENSOR> &r
 LSM6DSRStatusTypeDef LSM6DSRArray32::i3c_disable_set(uint8_t val) {
     lsm6dsr_ctrl9_xl_t ctrl9_xl;
     lsm6dsr_i3c_bus_avb_t i3c_bus_avb;
-    uint8_t tmp = 0;
     int32_t ret;
 
     ret = read_reg(LSM6DSR_CTRL9_XL, mem_ws_.ptr() /*(uint8_t *)&ctrl9_xl*/, 1);
@@ -540,13 +534,13 @@ LSM6DSRStatusTypeDef LSM6DSRArray32::update_acc_axes() {
     return LSM6DSR_OK;
 }
 
-LSM6DSRArray32::Vector3f LSM6DSRArray32::get_acc_axes(size_t index) {
-    return sensor_data_[index].acc.value - acc_bias[index];
-}
+// LSM6DSRArray32::Vector3f LSM6DSRArray32::get_acc_axes(size_t index) {
+//     return sensor_data_[index].acc.value - acc_biases[index];
+// }
 
-LSM6DSRArray32::Vector3f LSM6DSRArray32::get_acc_axes_raw(size_t index) { return sensor_data_[index].acc.value; }
+LSM6DSRArray32::Vector3f LSM6DSRArray32::get_acc_axes(size_t index) { return sensor_data_[index].acc.value; }
 
-std::array<int16_t, 3> LSM6DSRArray32::get_acc_axes_raw_bits(size_t index) { return sensor_data_[index].acc.raw_value; }
+std::array<int16_t, 3> LSM6DSRArray32::get_acc_axes_raw(size_t index) { return sensor_data_[index].acc.raw_value; }
 
 LSM6DSRStatusTypeDef LSM6DSRArray32::enable_gyro() {
     /* Check if the component is already enabled */
@@ -582,12 +576,12 @@ LSM6DSRStatusTypeDef LSM6DSRArray32::update_gyro_axes() {
     return LSM6DSR_OK;
 }
 
-LSM6DSRArray32::Vector3f LSM6DSRArray32::get_gyro_axes(size_t index) {
-    return sensor_data_[index].gyro.value - gyro_bias[index];
-}
+// LSM6DSRArray32::Vector3f LSM6DSRArray32::get_gyro_axes(size_t index) {
+//     return sensor_data_[index].gyro.value - gyro_bias[index];
+// }
 
-LSM6DSRArray32::Vector3f LSM6DSRArray32::get_gyro_axes_raw(size_t index) { return sensor_data_[index].gyro.value; }
+LSM6DSRArray32::Vector3f LSM6DSRArray32::get_gyro_axes(size_t index) { return sensor_data_[index].gyro.value; }
 
-std::array<int16_t, 3> LSM6DSRArray32::get_gyro_axes_raw_bits(size_t index) {
+std::array<int16_t, 3> LSM6DSRArray32::get_gyro_axes_raw(size_t index) {
     return sensor_data_[index].gyro.raw_value;
 }

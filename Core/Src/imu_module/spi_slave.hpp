@@ -22,7 +22,11 @@ public:
     }
 
     bool available() { return HAL_SPI_GetState(hspi_) == HAL_SPI_STATE_READY; }
-    // bool available_dma() { return spi_state_ == SPI_COMPLETE; }
+    bool available_dma() { return spi_state_ == SPI_COMPLETE; }
+
+    void on_dma_complete(std::function<void(void)> callback) {
+        stmbed::callback::attach(reinterpret_cast<intptr_t>(hspi_), std::move(callback), 100);
+    }
 
     bool write_read(uint8_t *tx_data, uint8_t *rx_data, size_t size, uint32_t timeout) {
         if (is_dma_enabled_) {
@@ -46,10 +50,6 @@ private:
     SPIState spi_state_ = SPI_COMPLETE;
 
     void dma_callback(void) {
-        // if (type == 0) {
         spi_state_ = SPI_COMPLETE;
-        // } else if (type == 1) {
-        //     spi_state_ = SPI_ERROR;
-        // }
     }
 };

@@ -9,21 +9,10 @@ public:
     using Vector3f = Eigen::Vector3f;
     static constexpr size_t NUM_SENSOR = LSM6DSRArray32::NUM_SENSOR;
 
-    IMUFusion(LSM6DSRArray32 &imu_array, double Ts) : imu_array_(imu_array), Ts_(Ts) {
-
-        // for (size_t i = 0; i < NUM_SENSOR; i++) {
-        //     // bool is_exclude = false;
-        //     // for (size_t ax = 0; ax < 3; ax++) {
-        //     //     if (std::find(gyro_exlude_val_index.begin(), gyro_exlude_val_index.end(), 3 * i + ax) !=
-        //     //     gyro_exlude_val_index.end()) {
-        //     //         is_exclude = true;
-        //     //         break;
-        //     //     }
-        //     // }
-        //     // gyro_max_weight[i] = is_exclude ? 0 : 1;
-        //     // gyro_max_weight[i] = 1;
-        // }
-
+    IMUFusion(LSM6DSRArray32 &imu_array, float fusion_gyro_delta, float fusion_gyro_beta, float fusion_acc_delta, float fusion_acc_beta) : 
+        imu_array_(imu_array), fusion_gyro_delta_(fusion_gyro_delta), fusion_gyro_beta_(fusion_gyro_beta), fusion_acc_delta_(fusion_acc_delta), fusion_acc_beta_(fusion_acc_beta)
+    {
+        // initialize fusion weights
         for (size_t i = 0; i < NUM_SENSOR; i++) {
             fusion_gyro_weights_[i] = {1, 1, 1};
             fusion_acc_weights_[i] = {1, 1, 1};
@@ -39,8 +28,7 @@ public:
     stmbed::DigitalOut debug_pa8{stmbed::PA8};
 
     bool update() {
-
-        // imu_array_.set_debug_pa4(1); // 174us
+        // 174us
         if (imu_array_.update_acc_axes() != LSM6DSR_OK) {
             return false;
         }
@@ -49,44 +37,23 @@ public:
             return false;
         }
 
-        // imu_array_.set_debug_pa5(1); // 71us 〜 85usぐらい(powの分岐で変わる)
-
+        // 71us 〜 85usぐらい(powの分岐で変わる)
         // 座標系を合わせた値を取得
-        // debug_pa8 = 1;
         for (size_t i = 0; i < NUM_SENSOR; i++) {
             // 31us
             // tmp_acc_[i] = rotate_vec(imu_pose_rot[i], imu_array_.get_acc_axes(i));
             // tmp_gyro_[i] = rotate_vec(imu_pose_rot[i], imu_array_.get_gyro_axes(i));
 
             // 29us
-            tmp_acc_[i] = rotate_vec_i(i, imu_array_.get_acc_axes(i));
-            tmp_gyro_[i] = rotate_vec_i(i, imu_array_.get_gyro_axes(i));
+            tmp_acc_[i] = rotate_vec_i(i, imu_array_.get_acc_axes(i) - gyro_biases[i]);
+            tmp_gyro_[i] = rotate_vec_i(i, imu_array_.get_gyro_axes(i) - gyro_biases[i]);
         }
-
-        // debug_pa8 = 0;
 
         // 温度補正
         // Todo
 
         // 干渉抑制
-        // for (size_t i = 0; i < 16; i++) {
-        //     auto &filter_list = ni_filters[i];
-        //     for (auto &filter_pair : filter_list) {
-        //         auto &nf = filter_pair.first;
-        //         auto &isf = filter_pair.second;
-        //         for (size_t j = 0; j < NUM_SENSOR; j++) {
-        //             if (i == j) {
-        //                 for (size_t ax = 0; ax < 3; ax++) {
-        //                     tmp_gyro_[j][ax] = nf[ax].responce(tmp_gyro_[j][ax]);
-        //                 }
-        //             } else {
-        //                 for (size_t ax = 0; ax < 3; ax++) {
-        //                     tmp_gyro_[j][ax] = isf[ax].responce(tmp_gyro_[j][ax]);
-        //                 }
-        //             }
-        //         }
-        //     }
-        // }
+        // Todo
 
         // 外れ値補正による重み付き平均 21us
         acc_.setZero();
@@ -98,12 +65,9 @@ public:
         for (size_t i = 0; i < 3; i++) {
             acc_weight_sum_inv_[i] = 1 / acc_weight_sum_[i];
         }
-
         for (size_t i = 0; i < NUM_SENSOR; i++) {
             for (size_t ax = 0; ax < 3; ax++) {
-                // 除算の回数を減らす、0.5〜1us高速化
                 acc_[ax] += tmp_acc_[i][ax] * fusion_acc_weights_[i][ax] * acc_weight_sum_inv_[ax];
-                // acc_[ax] += tmp_acc_[i][ax] * fusion_acc_weights_[i][ax] / acc_weight_sum_[ax];
             }
         }
         gyro_weight_sum_.setZero();
@@ -116,20 +80,19 @@ public:
         for (size_t i = 0; i < NUM_SENSOR; i++) {
             for (size_t ax = 0; ax < 3; ax++) {
                 gyro_[ax] += tmp_gyro_[i][ax] * fusion_gyro_weights_[i][ax] * gyro_weight_sum_inv_[ax];
-                // gyro_[ax] += tmp_gyro_[i][ax] * fusion_gyro_weights_[i][ax] / gyro_weight_sum_[ax];
             }
         }
 
         // 19us
+        // update weights
         Vector3f acc_diff, gyro_diff;
-        // 外れ値補正の重み更新
         for (size_t i = 0; i < NUM_SENSOR; i++) {
             // acc
             acc_diff = acc_ - tmp_acc_[i];
             for (size_t ax = 0; ax < 3; ax++) {
                 acc_diff[ax] = abs(acc_diff[ax]);
                 if (fusion_acc_delta_ < acc_diff[ax]) {
-                    fusion_acc_weights_[i][ax] = my_pow(fusion_acc_delta_ / acc_diff[ax], fusion_acc_beta_);
+                    fusion_acc_weights_[i][ax] = std::pow(fusion_acc_delta_ / acc_diff[ax], fusion_acc_beta_);
                 } else {
                     fusion_acc_weights_[i][ax] = 1;
                 }
@@ -140,27 +103,14 @@ public:
             for (size_t ax = 0; ax < 3; ax++) {
                 gyro_diff[ax] = abs(gyro_diff[ax]);
                 if (fusion_gyro_delta_ < gyro_diff[ax]) {
-                    fusion_gyro_weights_[i][ax] = my_pow(fusion_gyro_delta_ / gyro_diff[ax], fusion_gyro_beta_);
+                    fusion_gyro_weights_[i][ax] = std::pow(fusion_gyro_delta_ / gyro_diff[ax], fusion_gyro_beta_);
                 } else {
                     fusion_gyro_weights_[i][ax] = 1;
                 }
             }
         }
 
-        // imu_array_.set_debug_pa4(0);
-        // imu_array_.set_debug_pa5(0);
-
         return true;
-    }
-
-    inline float my_pow(float x, int y) const {
-        // float result = 1.0;
-        // for (int i = 0; i < y; i++) {
-        //     result *= x;
-        // }
-        // return result;
-        // return pow(x, y);
-        return x * x;
     }
 
     Vector3f get_acc_fusion() const { return acc_; }
@@ -172,20 +122,46 @@ public:
     std::array<Vector3f, NUM_SENSOR> &fusion_gyro_weights() { return fusion_gyro_weights_; }
     std::array<Vector3f, NUM_SENSOR> &fusion_acc_weights() { return fusion_acc_weights_; }
 
+    Vector3f rotate_vec_i(size_t &i, const Vector3f &v) {
+        if (i < 16) {
+            switch (i % 4) {
+            case 0:
+                return Vector3f(v.x(), v.y(), v.z());
+            case 1:
+                return Vector3f(v.y(), -v.x(), v.z());
+            case 2:
+                return Vector3f(-v.x(), -v.y(), v.z());
+            case 3:
+                return Vector3f(-v.y(), v.x(), v.z());
+            }
+        } else {
+            switch (i % 4) {
+            case 0:
+                return Vector3f(-v.x(), v.y(), -v.z());
+            case 1:
+                return Vector3f(v.y(), v.x(), -v.z());
+            case 2:
+                return Vector3f(v.x(), -v.y(), -v.z());
+            case 3:
+                return Vector3f(-v.y(), -v.x(), -v.z());
+            }
+        }
+
+        return v;
+    }
+
 private:
     LSM6DSRArray32 &imu_array_;
-    const double Ts_;
+    const float fusion_gyro_delta_; // 平均との差のしきい値
+    const float fusion_gyro_beta_ ; // 重みの減衰率(beta >= 1)
+    const float fusion_acc_delta_;  // 平均との差のしきい値
+    const float fusion_acc_beta_;   // 重みの減衰率(beta >= 1)
     std::array<Vector3f, NUM_SENSOR> tmp_acc_;
     std::array<Vector3f, NUM_SENSOR> tmp_gyro_;
     std::array<Vector3f, NUM_SENSOR> fusion_gyro_weights_, fusion_acc_weights_;
     Vector3f acc_weight_sum_, gyro_weight_sum_;
     Vector3f acc_weight_sum_inv_, gyro_weight_sum_inv_;
-    static constexpr float gyro_var = 0.0025;
-    static constexpr float fusion_gyro_delta_ = 2 * gyro_var; // 平均との差のしきい値
-    static constexpr float fusion_gyro_beta_ = 2;             // 重みの減衰率(beta >= 1)
-    static constexpr float acc_var = 0.009;
-    static constexpr float fusion_acc_delta_ = 2 * acc_var; // 平均との差のしきい値
-    static constexpr float fusion_acc_beta_ = 2;            // 重みの減衰率(beta >= 1)
+
 
     Vector3f acc_;
     Vector3f gyro_;

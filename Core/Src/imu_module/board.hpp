@@ -11,7 +11,7 @@
 #include "spi_slave.hpp"
 
 extern UART_HandleTypeDef huart2; // VCP
-extern TIM_HandleTypeDef htim16;  // 1khz
+extern TIM_HandleTypeDef htim16;  // 2khz
 
 extern SPI_HandleTypeDef hspi1;
 
@@ -77,15 +77,12 @@ public:
     DigitalOut imu_clk{PA11};
     DigitalOut imu_mosi{PA12};
 
-    Ticker ticker_1khz{&htim16};
+    Ticker main_ticker{&htim16};
 
     LSM6DSRArray32 imu{imu_mosi, imu_misos, imu_clk, imu_cs};
-    IMUFusion imu_fusion{imu, 0.001};
-
-    // DigitalOut tp{PA8};
+    IMUFusion imu_fusion{imu, 2*raw_gyro_var, 2, 2*raw_acc_var, 2};
 
     SPISlave spi_slave{&hspi1};
-    DigitalIn spi_cs{PA4};
 };
 
 } // namespace imu_module

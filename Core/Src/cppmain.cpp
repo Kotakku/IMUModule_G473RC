@@ -4,6 +4,8 @@
 #include "main.h"
 
 void all_tests() {
+	using namespace imu_module;
+
     // fpu_dsp_test::float_mul_add_time_test();
     // fpu_dsp_test::float_div_time_test();
     // fpu_dsp_test::float_sqrtf_time_test();
@@ -46,40 +48,56 @@ extern "C" void cppmain() {
     using namespace imu_module;
 
     // all_tests();
+    // Peripherals::enable_std_printf();
 
     auto &led1 = Peripherals::get_instance().led1;
-    auto &led2 = Peripherals::get_instance().led2;
+    // auto &led2 = Peripherals::get_instance().led2;
     auto &spi_slave = Peripherals::get_instance().spi_slave;
-    auto &nss = Peripherals::get_instance().spi_cs;
 
     auto &imu_fusion = Peripherals::get_instance().imu_fusion;
-    auto &ticker_1khz = Peripherals::get_instance().ticker_1khz;
+    auto &main_ticker = Peripherals::get_instance().main_ticker;
 
     imu_fusion.begin();
 
-    uint8_t tx_buf[24] = {0};
-    uint8_t rx_buf[24] = {0};
+    uint8_t tx_buf[12] = {0};
+    uint8_t rx_buf[12] = {0};
 
     Vector3f latest_gyro_data, latest_acc_data;
 
     // IMU data update
-    ticker_1khz.attach([&]() {
+    main_ticker.attach([&]() {
         imu_fusion.update();
-        __disable_irq();
         latest_gyro_data = imu_fusion.get_gyro_fusion();
         latest_acc_data = imu_fusion.get_acc_fusion();
-        __enable_irq();
     });
 
-    // SPI data update on NSS rising edge
-    nss.attach([&]() {
-        std::memcpy(tx_buf, latest_gyro_data.data(), sizeof(float) * 3);
-        std::memcpy(tx_buf + sizeof(float) * 3, latest_acc_data.data(), sizeof(float) * 3);
+    // SPI buffer update & start next transfer on DMA complete
+    spi_slave.on_dma_complete([&](){
+        for(size_t i = 0; i < 3; i++) {
+            float val = latest_gyro_data[i] / LSM6DSR_GYRO_SENSITIVITY_FS_1000DPS;
+            int16_t val_int = static_cast<int16_t>(std::roundf(val));
+            tx_buf[i * 2] = val_int & 0xFF;
+            tx_buf[i * 2 + 1] = (val_int >> 8) & 0xFF;
+        }
+
+        for(size_t i = 0; i < 3; i++) {
+            float val = latest_acc_data[i] / LSM6DSR_ACC_SENSITIVITY_FS_2G;
+            int16_t val_int = static_cast<int16_t>(std::roundf(val));
+            tx_buf[6 + i * 2] = val_int & 0xFF;
+            tx_buf[6 + i * 2 + 1] = (val_int >> 8) & 0xFF;
+        }
+
         spi_slave.write_read(tx_buf, rx_buf, 12, 10);
-    });
+        });
+
+    // Start first transfer
+    spi_slave.write_read(tx_buf, rx_buf, 12, 10);
 
     while (1) {
-        led1 = !led1;
+    	// heartbeat
+        led1 = 1;
+        HAL_Delay(500);
+        led1 = 0;
         HAL_Delay(500);
     }
 }
