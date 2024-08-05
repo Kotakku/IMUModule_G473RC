@@ -78,8 +78,10 @@ public:
 
     Ticker main_ticker{&htim16};
 
+    const float ticker_period = 0.0005f; // [s]
+
     LSM6DSRArray32 imu{imu_mosi, imu_misos, imu_clk, imu_cs};
-    IMUFusion imu_fusion{imu, 2*raw_gyro_var, 2, 2*raw_acc_var, 2};
+    IMUFusion imu_fusion{imu, 2*raw_gyro_var, 4, 2*raw_acc_var, 4};
 
     SPISlave spi_slave{&hspi1};
 };

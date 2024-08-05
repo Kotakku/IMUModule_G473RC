@@ -45,7 +45,7 @@ public:
             // tmp_gyro_[i] = rotate_vec(imu_pose_rot[i], imu_array_.get_gyro_axes(i));
 
             // 29us
-            tmp_acc_[i] = rotate_vec_i(i, imu_array_.get_acc_axes(i) - gyro_biases[i]);
+            tmp_acc_[i] = rotate_vec_i(i, imu_array_.get_acc_axes(i) - acc_biases[i]);
             tmp_gyro_[i] = rotate_vec_i(i, imu_array_.get_gyro_axes(i) - gyro_biases[i]);
         }
 
@@ -139,11 +139,11 @@ public:
             case 0:
                 return Vector3f(-v.x(), v.y(), -v.z());
             case 1:
-                return Vector3f(v.y(), v.x(), -v.z());
+                return Vector3f(-v.y(), -v.x(), -v.z());
             case 2:
                 return Vector3f(v.x(), -v.y(), -v.z());
             case 3:
-                return Vector3f(-v.y(), -v.x(), -v.z());
+                return Vector3f(v.y(), v.x(), -v.z());
             }
         }
 

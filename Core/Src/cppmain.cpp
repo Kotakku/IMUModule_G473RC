@@ -1,6 +1,7 @@
 #include "imu_module/board.hpp"
 #include "imu_module/fpu_dsp_test.hpp"
 #include "imu_module/unit_test.hpp"
+#include "imu_module/calibration_func.hpp"
 #include "main.h"
 
 void all_tests() {
@@ -23,31 +24,39 @@ void all_tests() {
     // unit_test::led_test();
     // unit_test::vcp_test();
     // unit_test::ticker_test();
+    // unit_test::spi_slave_dma_test();
+
     // unit_test::imu_whoami_test();
     // unit_test::imu_read_raw_test();
     // unit_test::imu_axes_check_test();
-    // unit_test::imu_rot_check();
     // unit_test::imu_gyro_fusion_test();
     // unit_test::imu_acc_fusion_test();
 
     // unit_test::imu_fusion_gyro_integrate_check_test();
     // unit_test::imu_fusion_acc_integrate_check_test();
 
-    // unit_test::imu_gyro_bias_check();
-    // unit_test::imu_acc_bias_check();
-    // unit_test::imu_acc_raw_variance_check();
-
-    // unit_test::imu_angle_fusion_check();
+    unit_test::imu_angle_fusion_check();
     // unit_test::imu_vel_fusion_check();
 
-    // unit_test::spi_nss_it_test();
-    // unit_test::spi_slave_dma_test();
+    // キャリブレーションした後に確認する関数
+    // unit_test::imu_calibrated_gyro_bias_check();
+    // unit_test::imu_calibrated_acc_bias_check();
+}
+
+void all_calibration() {
+	using namespace imu_module;
+
+	// calibration_func::imu_get_gyro_bias();
+    // calibration_func::imu_get_acc_bias();
+    // calibration_func::imu_get_gyro_raw_variance();
+    // calibration_func::imu_get_acc_raw_variance();
 }
 
 extern "C" void cppmain() {
     using namespace imu_module;
 
-    // all_tests();
+    all_tests();
+    all_calibration();
     // Peripherals::enable_std_printf();
 
     auto &led1 = Peripherals::get_instance().led1;

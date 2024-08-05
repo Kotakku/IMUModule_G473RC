@@ -33,6 +33,46 @@ void vcp_test() {
     }
 }
 
+void ticker_test() {
+    Peripherals::enable_std_printf();
+    printf_test_func();
+
+    auto &main_ticker = Peripherals::get_instance().main_ticker;
+    auto &led1 = Peripherals::get_instance().led1;
+
+    main_ticker.attach([&]() { led1 = !led1; });
+
+    while (1)
+        ;
+}
+
+void spi_slave_dma_test() {
+    Peripherals::enable_std_printf();
+    printf_test_func();
+    printf("Hello, world!\n");
+
+    auto &led1 = Peripherals::get_instance().led1;
+    auto &spi_slave = Peripherals::get_instance().spi_slave;
+
+    uint8_t tx_buf[6] = {0, 33, 44, 55, 66, 77};
+    uint8_t rx_buf[6];
+
+    spi_slave.on_dma_complete([&]() {
+        spi_slave.write_read(tx_buf, rx_buf, 6, 10);
+        // printf("nss\n");
+    });
+    spi_slave.write_read(tx_buf, rx_buf, 6, 10);
+
+    printf("is_dma_enabled: %d\n", spi_slave.is_dma_enabled());
+
+    while (1) {
+    	led1 = !led1;
+        tx_buf[0]++;
+
+        HAL_Delay(1);
+    }
+}
+
 void imu_whoami_test() {
     Peripherals::enable_std_printf();
     printf_test_func();
@@ -97,7 +137,7 @@ void imu_axes_check_test() {
         imu_fusion.update();
 
         for (size_t i = 0; i < IMUFusion::NUM_SENSOR; i++) {
-            printf("%.3f", imu_fusion.get_gyro(i).z());
+            printf("%.3f", imu_fusion.get_gyro(i).x());
             if (i == IMUFusion::NUM_SENSOR - 1)
                 printf("\n");
             else
@@ -106,19 +146,6 @@ void imu_axes_check_test() {
 
         // HAL_Delay(1);
     }
-}
-
-void ticker_test() {
-    Peripherals::enable_std_printf();
-    printf_test_func();
-
-    auto &main_ticker = Peripherals::get_instance().main_ticker;
-    auto &led1 = Peripherals::get_instance().led1;
-
-    main_ticker.attach([&]() { led1 = !led1; });
-
-    while (1)
-        ;
 }
 
 void imu_gyro_fusion_test() {
@@ -135,9 +162,7 @@ void imu_gyro_fusion_test() {
     main_ticker.attach([&]() {
         imu_fusion.update();
         Vector3f gyro = imu_fusion.get_gyro_fusion();
-        // Vector3f gyro = imu_fusion.get_gyro(0);
         printf("%.3f,%.3f,%.3f\n", gyro.x(), gyro.y(), gyro.z());
-        // printf("%.5f\n", gyro.z());
     });
 
     while (1) {
@@ -185,6 +210,7 @@ void imu_fusion_gyro_integrate_check_test() {
 
     auto &imu_fusion = Peripherals::get_instance().imu_fusion;
     auto &main_ticker = Peripherals::get_instance().main_ticker;
+    const float Ts = Peripherals::get_instance().ticker_period;
     auto &led1 = Peripherals::get_instance().led1;
     auto &led2 = Peripherals::get_instance().led2;
 
@@ -202,7 +228,7 @@ void imu_fusion_gyro_integrate_check_test() {
         imu_fusion.update();
         Vector3f gyro = imu_fusion.get_gyro_fusion();
 
-        angle += (prev_gyro + gyro.z()) * 0.5f * 0.001f;
+        angle += (prev_gyro + gyro.z()) * 0.5f * Ts;
         prev_gyro = gyro.z();
 
         printf("%.5f\n", angle);
@@ -224,6 +250,7 @@ void imu_fusion_acc_integrate_check_test() {
 
     auto &imu_fusion = Peripherals::get_instance().imu_fusion;
     auto &main_ticker = Peripherals::get_instance().main_ticker;
+    const float Ts = Peripherals::get_instance().ticker_period;
     auto &led1 = Peripherals::get_instance().led1;
     auto &led2 = Peripherals::get_instance().led2;
 
@@ -242,7 +269,7 @@ void imu_fusion_acc_integrate_check_test() {
         Vector3f acc = imu_fusion.get_acc_fusion();
 
         float bacc = acc.x() + 0.0f;
-        vel += (prev_acc + bacc) * 0.5f * 0.001f;
+        vel += (prev_acc + bacc) * 0.5f * Ts;
         prev_acc = bacc;
 
         printf("%.5f\n", vel);
@@ -258,130 +285,77 @@ void imu_fusion_acc_integrate_check_test() {
     }
 }
 
-void imu_gyro_bias_check() {
+void imu_calibrated_gyro_bias_check() {
     Peripherals::enable_std_printf();
     printf_test_func();
 
-    auto &imu = Peripherals::get_instance().imu;
-    // auto &main_ticker = Peripherals::get_instance().main_ticker;
-
-    std::array<Vector3f, 32> biases;
-    float gain = 0.1;
-
+    auto &imu = Peripherals::get_instance().imu_fusion;
     imu.begin();
-    imu.enable_acc();
-    imu.enable_gyro();
 
     HAL_Delay(200);
 
-    for (size_t i = 0; i < 32; i++) {
-        biases[i] = {0, 0, 0};
-    }
-
-    const size_t init_loop_num = 1000;
-    for (size_t j = 0; j < init_loop_num; j++) {
-        imu.update_acc_axes();
-        imu.update_gyro_axes();
-
-        for (size_t i = 0; i < 32; i++) {
-            // biases[i] += (imu.get_gyro_axes_raw(i)) /static_cast<float>(init_loop_num);
-        }
-        HAL_Delay(1);
-    }
-
-    size_t cnt = 0;
-
     while (1) {
-        // imu.update_acc_axes();
-        imu.update_gyro_axes();
+        imu.update();
 
         for (size_t i = 0; i < 32; i++) {
-            biases[i] += (imu.get_gyro_axes(i) - biases[i]) * gain;
+            Vector3f gyro = imu.get_gyro(i);
             if (i != 31) {
-                printf("%.8f,%.8f,%.8f,", biases[i].x(), biases[i].y(), biases[i].z());
+                printf("%.8f,%.8f,%.8f,", gyro.x(), gyro.y(), gyro.z());
             } else {
-                printf("%.8f,%.8f,%.8f\n", biases[i].x(), biases[i].y(), biases[i].z());
-            }
-        }
-
-        if (cnt <= (50 * 8)) {
-            cnt++;
-            if (cnt % 50 == 0) {
-                gain /= 2;
+                printf("%.8f,%.8f,%.8f\n", gyro.x(), gyro.y(), gyro.z());
             }
         }
     }
 }
 
-void imu_acc_bias_check() {
+void imu_calibrated_acc_bias_check() {
     Peripherals::enable_std_printf();
     printf_test_func();
 
-    auto &imu = Peripherals::get_instance().imu;
-    // auto &main_ticker = Peripherals::get_instance().main_ticker;
-
-    std::array<Vector3f, 32> biases;
-    const float gain = 0.003;
-
+    auto &imu = Peripherals::get_instance().imu_fusion;
     imu.begin();
-    imu.enable_acc();
-    imu.enable_gyro();
 
-    for (size_t i = 0; i < 100; i++) {
-        imu.update_acc_axes();
-        imu.update_gyro_axes();
-        HAL_Delay(1);
-    }
+    HAL_Delay(200);
 
     while (1) {
-        imu.update_acc_axes();
-        // imu.update_gyro_axes();
+        imu.update();
 
         for (size_t i = 0; i < 32; i++) {
-
-            Vector3f acc = imu.get_acc_axes(i);
-            if (i < 16) {
-                acc.z() -= GRAVITY;
-            } else {
-                acc.z() += GRAVITY;
-            }
-
-            biases[i] += (acc - biases[i]) * gain;
-
+            Vector3f gyro = imu.get_acc(i);
             if (i != 31) {
-                printf("%.8f,%.8f,%.8f,", biases[i].x(), biases[i].y(), biases[i].z());
+                printf("%.8f,%.8f,%.8f,", gyro.x(), gyro.y(), gyro.z());
             } else {
-                printf("%.8f,%.8f,%.8f\n", biases[i].x(), biases[i].y(), biases[i].z());
+                printf("%.8f,%.8f,%.8f\n", gyro.x(), gyro.y(), gyro.z());
             }
         }
     }
 }
 
-void imu_acc_raw_variance_check() {
-    Peripherals::enable_std_printf();
-    printf_test_func();
+// void imu_acc_raw_variance_check() {
+//     Peripherals::enable_std_printf();
+//     printf_test_func();
 
-    auto &imu = Peripherals::get_instance().imu;
-    // auto &main_ticker = Peripherals::get_instance().main_ticker;
+//     auto &imu = Peripherals::get_instance().imu;
+//     // auto &main_ticker = Peripherals::get_instance().main_ticker;
 
-    imu.begin();
-    imu.enable_acc();
-    imu.enable_gyro();
+//     imu.begin();
+//     imu.enable_acc();
+//     imu.enable_gyro();
 
-    for (size_t i = 0; i < 100; i++) {
-        imu.update_acc_axes();
-        imu.update_gyro_axes();
-        HAL_Delay(1);
-    }
+//     for (size_t i = 0; i < 100; i++) {
+//         imu.update_acc_axes();
+//         imu.update_gyro_axes();
+//         HAL_Delay(1);
+//     }
 
-    while (1) {
-        imu.update_acc_axes();
-        // imu.update_gyro_axes();
+//     while (1) {
+//         imu.update_acc_axes();
+//         // imu.update_gyro_axes();
 
-        Vector3f acc = imu.get_acc_axes(0);
-        printf("%.8f,%.8f,%.8f\n", acc.x(), acc.y(), acc.z());
-    }
-}
+//         Vector3f acc = imu.get_acc_axes(0);
+//         printf("%.8f,%.8f,%.8f\n", acc.x(), acc.y(), acc.z());
+//     }
+// }
 
 #include <Eigen/Geometry>
 Eigen::Quaternionf integrateAngularVelocity(const Eigen::Quaternionf &q, const Eigen::Vector3f &omega, float dt) {
@@ -402,6 +376,7 @@ void imu_angle_fusion_check() {
 
     auto &imu_fusion = Peripherals::get_instance().imu_fusion;
     auto &main_ticker = Peripherals::get_instance().main_ticker;
+    const float Ts = Peripherals::get_instance().ticker_period;
 
     imu_fusion.begin();
 
@@ -421,7 +396,7 @@ void imu_angle_fusion_check() {
         imu_fusion.update();
         prev_omega = omega;
         omega = imu_fusion.get_gyro_fusion();
-        q = integrateAngularVelocity(q, (prev_omega + omega) * 0.5f, 0.001f);
+        q = integrateAngularVelocity(q, (prev_omega + omega) * 0.5f, Ts);
 
         // Eigen::Vector3f rpy = q.toRotationMatrix().eulerAngles(0, 1, 2);
     });
@@ -431,23 +406,6 @@ void imu_angle_fusion_check() {
         HAL_Delay(30);
     }
 }
-
-//void imu_rot_check() {
-//    Peripherals::enable_std_printf();
-//    printf_test_func();
-//
-//    HAL_Delay(1000);
-//
-//    for (size_t i = 0; i < 32; i++) {
-//        Vector3f v(1, 2, 3);
-//        Vector3f vr = imu_pose_rot[i] * v;
-//
-//        printf("%2d: %.5f,%.5f,%.5f\n", i, vr.x(), vr.y(), vr.z());
-//    }
-//
-//    while (1) {
-//    }
-//}
 
 void imu_vel_fusion_check() {
     Peripherals::enable_std_printf();
@@ -496,32 +454,6 @@ void imu_vel_fusion_check() {
     }
 }
 
-void spi_slave_dma_test() {
-    Peripherals::enable_std_printf();
-    printf_test_func();
-    printf("Hello, world!\n");
-
-    auto &led1 = Peripherals::get_instance().led1;
-    auto &spi_slave = Peripherals::get_instance().spi_slave;
-
-    uint8_t tx_buf[6] = {0, 33, 44, 55, 66, 77};
-    uint8_t rx_buf[6];
-
-    spi_slave.on_dma_complete([&]() {
-        spi_slave.write_read(tx_buf, rx_buf, 6, 10);
-        // printf("nss\n");
-    });
-    spi_slave.write_read(tx_buf, rx_buf, 6, 10);
-
-    printf("is_dma_enabled: %d\n", spi_slave.is_dma_enabled());
-
-    while (1) {
-    	led1 = !led1;
-        tx_buf[0]++;
-
-        HAL_Delay(1);
-    }
-}
 
 } // namespace unit_test
 } // namespace imu_module
