@@ -35,7 +35,7 @@ void all_tests() {
     // unit_test::imu_fusion_gyro_integrate_check_test();
     // unit_test::imu_fusion_acc_integrate_check_test();
 
-    unit_test::imu_angle_fusion_check();
+    // unit_test::imu_angle_fusion_check();
     // unit_test::imu_vel_fusion_check();
 
     // キャリブレーションした後に確認する関数
