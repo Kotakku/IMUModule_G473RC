@@ -53,6 +53,11 @@ public:
             std::array<int16_t, 3> raw_value;
             Vector3f value;
         } gyro;
+
+        struct {
+            int16_t raw_value;
+            float value;
+        } temperature;
     };
 
     LSM6DSRArray32(stmbed::DigitalOut &mosi_pin, std::array<stmbed::DigitalIn, 32> &miso_pins,
@@ -124,6 +129,11 @@ public:
     // Vector3f get_gyro_axes(size_t index);
     Vector3f get_gyro_axes(size_t index);
     std::array<int16_t, 3> get_gyro_axes_raw(size_t index);
+
+    // Temprature
+    LSM6DSRStatusTypeDef update_temperature();
+    float get_temperature(size_t index);
+    int16_t get_temperature_raw(size_t index);
 
     // debug
     std::array<lsm6dst_data_t, NUM_SENSOR> sensor_data() { return sensor_data_; }

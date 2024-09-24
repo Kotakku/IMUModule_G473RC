@@ -582,6 +582,20 @@ LSM6DSRStatusTypeDef LSM6DSRArray32::update_gyro_axes() {
 
 LSM6DSRArray32::Vector3f LSM6DSRArray32::get_gyro_axes(size_t index) { return sensor_data_[index].gyro.value; }
 
-std::array<int16_t, 3> LSM6DSRArray32::get_gyro_axes_raw(size_t index) {
-    return sensor_data_[index].gyro.raw_value;
+std::array<int16_t, 3> LSM6DSRArray32::get_gyro_axes_raw(size_t index) { return sensor_data_[index].gyro.raw_value; }
+
+LSM6DSRStatusTypeDef LSM6DSRArray32::update_temperature() {
+    if (read_reg(LSM6DSR_OUT_TEMP_L, mem_ws_.ptr(), 2) != 0) {
+        return LSM6DSR_ERROR;
+    }
+
+    for (size_t i = 0; i < NUM_SENSOR; i++) {
+        sensor_data_[i].temperature.raw_value = (int16_t)((mem_ws_.data[i][1] << 8) | mem_ws_.data[i][0]);
+        sensor_data_[i].temperature.value = sensor_data_[i].temperature.raw_value / 256.0f + 25.0f;
+    }
+
+    return LSM6DSR_OK;
 }
+
+float LSM6DSRArray32::get_temperature(size_t index) { return sensor_data_[index].temperature.value; }
+int16_t LSM6DSRArray32::get_temperature_raw(size_t index) { return sensor_data_[index].temperature.raw_value; }
