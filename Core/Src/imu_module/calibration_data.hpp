@@ -8,189 +8,149 @@ using Vector3f = Eigen::Vector3f;
 
 constexpr size_t NUM_SENSOR = 32;
 
-static constexpr float raw_gyro_var = 0.0023;
-static constexpr float raw_acc_var = 0.009;
+// static constexpr float raw_gyro_var = 0.0023;
+// static constexpr float raw_acc_var = 0.009;
 
-// 生値のジャイロのバイアス[rad/s]
-const static std::array<Vector3f, NUM_SENSOR> gyro_biases = {
-	Vector3f{1.160132e-03, -6.248791e-03, 5.877708e-04},
-	Vector3f{4.733679e-03, -5.332512e-03, 5.546316e-03},
-	Vector3f{6.447411e-03, -5.404891e-03, 9.769382e-04},
-	Vector3f{1.056069e-02, -7.573662e-04, -1.444299e-03},
-	Vector3f{9.254740e-03, -4.103965e-03, -1.617072e-03},
-	Vector3f{2.389687e-03, -8.628457e-03, 2.207640e-04},
-	Vector3f{-1.809263e-04, -2.285679e-03, -5.532247e-03},
-	Vector3f{3.522483e-03, -3.274047e-03, 3.049550e-03},
-	Vector3f{5.075059e-03, -8.000398e-03, -2.278171e-04},
-	Vector3f{9.722997e-03, -6.848299e-03, -1.698835e-03},
-	Vector3f{-1.626704e-03, -1.883859e-02, 1.470016e-03},
-	Vector3f{2.774682e-03, -7.009162e-03, 1.902767e-03},
-	Vector3f{-1.478366e-03, -1.447473e-02, 2.882664e-03},
-	Vector3f{4.758902e-03, -7.522257e-03, -4.543768e-03},
-	Vector3f{1.947796e-03, -8.152645e-03, -1.574517e-03},
-	Vector3f{1.068660e-03, -1.268062e-02, 4.527587e-03},
-	Vector3f{1.554610e-03, -8.490143e-03, 6.747087e-03},
-	Vector3f{1.801230e-03, -1.132978e-02, -4.033995e-03},
-	Vector3f{8.294070e-04, -8.495452e-03, 4.512665e-03},
-	Vector3f{3.053457e-03, -1.629095e-02, -4.064872e-03},
-	Vector3f{8.423823e-04, -6.681768e-03, 1.253766e-03},
-	Vector3f{1.103265e-03, -7.802263e-03, -4.598820e-03},
-	Vector3f{-9.134122e-04, -1.136559e-02, -3.235320e-03},
-	Vector3f{5.140770e-03, -7.126653e-03, 2.251981e-03},
-	Vector3f{2.450532e-03, -8.767827e-03, -1.931099e-03},
-	Vector3f{-2.751326e-04, -7.194623e-03, -5.584416e-03},
-	Vector3f{7.696238e-03, -9.730491e-03, -2.103199e-03},
-	Vector3f{1.467297e-03, -9.501039e-03, -1.659069e-03},
-	Vector3f{2.429795e-03, -6.649597e-03, 7.628217e-03},
-	Vector3f{8.067138e-03, -6.969686e-03, -8.721627e-03},
-	Vector3f{7.422742e-03, -6.774517e-03, -3.907290e-03},
-	Vector3f{7.818590e-03, -7.070076e-03, -1.761190e-03},
+static constexpr float raw_gyro_var = 5.5e-5; // (rad/s)^2
+static constexpr float raw_acc_var = 1.2e-4;  // (m/s^2)^2
+
+namespace imu_module::calibration_data {
+
+namespace base_pose {
+const static std::array<Vector3f, NUM_SENSOR> gyro_average = {
+    Vector3f{3.050836e-04, -6.483025e-03, 1.449147e-03},   Vector3f{3.813544e-03, -6.177942e-03, 5.415233e-03},
+    Vector3f{5.720316e-03, -5.491504e-03, 2.364398e-03},   Vector3f{1.044911e-02, 6.101671e-04, -1.754230e-03},
+    Vector3f{8.084714e-03, -4.652524e-03, -5.338962e-04},  Vector3f{1.296605e-03, -8.999965e-03, -1.677960e-03},
+    Vector3f{-1.525418e-03, -2.745752e-03, -3.889815e-03}, Vector3f{2.822023e-03, -4.652524e-03, 1.601689e-03},
+    Vector3f{4.271170e-03, -8.466069e-03, 1.296605e-03},   Vector3f{9.305049e-03, -6.254213e-03, -2.440668e-03},
+    Vector3f{-2.059314e-03, -1.830501e-02, 3.966086e-03},  Vector3f{1.220334e-03, -7.550818e-03, 1.372876e-03},
+    Vector3f{-2.211856e-03, -1.494909e-02, 2.974565e-03},  Vector3f{4.194899e-03, -7.855901e-03, -4.423711e-03},
+    Vector3f{1.372876e-03, -8.313526e-03, -1.144063e-03},  Vector3f{9.152506e-04, -1.349995e-02, 5.720316e-03},
+    Vector3f{4.576253e-04, -8.008443e-03, 9.228777e-03},   Vector3f{8.389798e-04, -1.067792e-02, -3.889815e-03},
+    Vector3f{3.050836e-04, -8.542339e-03, 5.491504e-03},   Vector3f{2.669481e-03, -1.700841e-02, -4.347441e-03},
+    Vector3f{-3.050836e-04, -7.474547e-03, 4.805066e-03},  Vector3f{2.288127e-04, -7.398276e-03, -3.966086e-03},
+    Vector3f{-1.830501e-03, -1.212707e-02, -1.601689e-03}, Vector3f{4.423711e-03, -7.627089e-03, 2.288127e-03},
+    Vector3f{1.372876e-03, -8.923694e-03, 0.000000e+00},   Vector3f{-5.338962e-04, -7.855901e-03, -6.025400e-03},
+    Vector3f{6.864380e-03, -1.029657e-02, 5.338962e-04},   Vector3f{1.296605e-03, -9.838944e-03, -3.203377e-03},
+    Vector3f{1.983043e-03, -6.635567e-03, 7.398276e-03},   Vector3f{6.559297e-03, -6.864380e-03, -6.788109e-03},
+    Vector3f{6.864380e-03, -6.635567e-03, -3.432190e-03},  Vector3f{7.627089e-03, -7.322005e-03, -2.440668e-03},
 };
 
-// 生値の加速度センサのバイアス[m/s^2]
-const static std::array<Vector3f, NUM_SENSOR> acc_biases = {
-	Vector3f{-1.561795e-01, -1.541092e-01, 2.837969e-01},
-	Vector3f{9.846993e-02, -2.446907e-01, 5.974369e-02},
-	Vector3f{1.793425e-01, -1.891401e-01, 9.352856e-02},
-	Vector3f{1.405509e-01, 1.358656e-03, 1.872576e-01},
-	Vector3f{-1.657858e-02, -8.756004e-02, 5.684054e-02},
-	Vector3f{9.228908e-02, -2.754936e-01, 3.158953e-02},
-	Vector3f{1.959222e-01, -1.576722e-01, 3.000278e-02},
-	Vector3f{1.124483e-01, -8.966994e-04, 4.645527e-02},
-	Vector3f{-1.120570e-01, -1.835539e-01, 1.983187e-01},
-	Vector3f{2.311628e-02, -2.775536e-01, 1.284639e-01},
-	Vector3f{1.598996e-01, -1.449827e-01, 1.027460e-01},
-	Vector3f{1.123341e-01, 8.934936e-03, 1.086147e-01},
-	Vector3f{-9.070820e-02, -1.148890e-01, 1.399617e-02},
-	Vector3f{2.645419e-02, -2.975042e-01, -1.258460e-01},
-	Vector3f{2.198843e-01, -9.836705e-02, 1.063759e-02},
-	Vector3f{1.046031e-02, -3.085845e-02, 3.509895e-01},
-	Vector3f{1.612579e-01, -1.069693e-01, 2.345636e-01},
-	Vector3f{-9.374162e-02, 9.167720e-02, 4.633002e-02},
-	Vector3f{-1.559547e-01, -2.268606e-01, -3.901517e-02},
-	Vector3f{1.052748e-01, -2.592626e-01, 1.287542e-01},
-	Vector3f{2.823044e-01, -5.288136e-02, 6.395879e-02},
-	Vector3f{-1.337192e-02, -7.154031e-03, 4.008176e-02},
-	Vector3f{-1.391644e-01, -1.461138e-01, 2.398493e-01},
-	Vector3f{-8.375369e-03, -3.064686e-01, 2.550964e-01},
-	Vector3f{8.971516e-02, -1.868194e-01, 2.688620e-01},
-	Vector3f{5.143248e-02, 6.075989e-03, 2.758195e-02},
-	Vector3f{-1.061364e-01, -2.042931e-01, 1.225868e-01},
-	Vector3f{7.917409e-02, -2.483778e-01, 1.625151e-01},
-	Vector3f{2.015839e-02, -1.152792e-01, 2.923823e-01},
-	Vector3f{9.480211e-02, 3.137753e-01, 1.095472e-01},
-	Vector3f{-1.708353e-01, -2.590479e-01, 1.459011e-01},
-	Vector3f{1.140375e-01, -2.592392e-01, 1.183406e-01},
+const static std::array<Vector3f, NUM_SENSOR> acc_average = {
+    Vector3f{9.095833e-02, -1.304534e-01, 1.010595e+01},   Vector3f{9.335197e-02, -1.316502e-02, 9.871372e+00},
+    Vector3f{-1.136979e-02, -2.016642e-01, 9.879151e+00},  Vector3f{1.777278e-01, -2.327815e-01, 1.001738e+01},
+    Vector3f{2.387656e-01, -5.505372e-02, 9.851026e+00},   Vector3f{6.163623e-02, -6.762033e-02, 9.861198e+00},
+    Vector3f{-1.675548e-02, -2.100419e-01, 9.826491e+00},  Vector3f{1.633659e-01, -2.333799e-01, 9.879749e+00},
+    Vector3f{1.382327e-01, -1.519962e-01, 1.001140e+01},   Vector3f{-1.196820e-03, -5.445531e-02, 9.961133e+00},
+    Vector3f{-3.829824e-02, -1.831135e-01, 9.891119e+00},  Vector3f{1.513977e-01, -2.453481e-01, 9.955748e+00},
+    Vector3f{1.525946e-01, -8.856469e-02, 9.836065e+00},   Vector3f{7.779330e-03, -9.035991e-02, 9.710998e+00},
+    Vector3f{3.111732e-02, -1.125011e-01, 9.804948e+00},   Vector3f{4.428234e-02, -2.597100e-01, 1.016998e+01},
+    Vector3f{-6.522670e-02, -1.077138e-01, -9.565584e+00}, Vector3f{-1.184852e-01, -1.412248e-01, -9.772635e+00},
+    Vector3f{8.557264e-02, -2.555211e-01, -9.842649e+00},  Vector3f{1.388311e-01, -3.769983e-02, -9.664921e+00},
+    Vector3f{6.163623e-02, -2.932209e-02, -9.738524e+00},  Vector3f{-7.180920e-03, -2.076483e-01, -9.806744e+00},
+    Vector3f{9.694242e-02, -1.908928e-01, -9.555411e+00},  Vector3f{5.325849e-02, -5.744736e-02, -9.573363e+00},
+    Vector3f{-1.418232e-01, -1.585787e-01, -9.515318e+00}, Vector3f{2.812527e-02, -2.106403e-01, -9.806744e+00},
+    Vector3f{1.142963e-01, -2.740718e-01, -9.662527e+00},  Vector3f{1.777278e-01, 1.735389e-02, -9.685266e+00},
+    Vector3f{-1.968769e-01, -9.095833e-02, -9.503349e+00}, Vector3f{6.702192e-02, 8.856469e-02, -9.730147e+00},
+    Vector3f{5.864418e-02, -2.968114e-01, -9.651157e+00},  Vector3f{1.777278e-01, -1.855071e-02, -9.706809e+00},
 };
 
-// struct EulerAngleXYZ {
-//     float alpha;
-//     float beta;
-//     float gamma;
-// };
+} // namespace base_pose
 
-// using Matrix3f = Eigen::Matrix3f;
+namespace xy_inverted_pose {
+const static std::array<Vector3f, NUM_SENSOR> gyro_average = {
+    Vector3f{2.288127e-04, -6.635567e-03, 1.525418e-03},   Vector3f{3.966086e-03, -6.101671e-03, 5.491504e-03},
+    Vector3f{5.796588e-03, -5.186420e-03, 2.440668e-03},   Vector3f{1.037284e-02, 3.813544e-04, -1.601689e-03},
+    Vector3f{8.160985e-03, -4.957607e-03, -4.576253e-04},  Vector3f{1.525418e-03, -9.076236e-03, -1.601689e-03},
+    Vector3f{-1.296605e-03, -2.898294e-03, -3.889815e-03}, Vector3f{2.669481e-03, -4.576253e-03, 1.830501e-03},
+    Vector3f{4.271170e-03, -8.618610e-03, 1.449147e-03},   Vector3f{9.228777e-03, -6.406755e-03, -2.211856e-03},
+    Vector3f{-2.288127e-03, -1.815247e-02, 4.042357e-03},  Vector3f{9.152506e-04, -7.627089e-03, 1.677960e-03},
+    Vector3f{-2.211856e-03, -1.517791e-02, 2.974565e-03},  Vector3f{4.423711e-03, -7.779630e-03, -4.347441e-03},
+    Vector3f{1.449147e-03, -8.160985e-03, -1.067792e-03},  Vector3f{8.389798e-04, -1.349995e-02, 5.720316e-03},
+    Vector3f{4.576253e-04, -8.237256e-03, 9.152506e-03},   Vector3f{9.915215e-04, -1.067792e-02, -3.813544e-03},
+    Vector3f{4.576253e-04, -8.618610e-03, 5.415233e-03},   Vector3f{2.593210e-03, -1.693214e-02, -4.347441e-03},
+    Vector3f{-1.525418e-04, -7.779630e-03, 4.728795e-03},  Vector3f{3.813544e-04, -7.169464e-03, -3.813544e-03},
+    Vector3f{-1.601689e-03, -1.205080e-02, -1.525418e-03}, Vector3f{4.499983e-03, -7.627089e-03, 2.516939e-03},
+    Vector3f{1.372876e-03, -9.228777e-03, 7.627089e-05},   Vector3f{-3.813544e-04, -7.932172e-03, -5.949129e-03},
+    Vector3f{7.093193e-03, -1.037284e-02, 4.576253e-04},   Vector3f{1.067792e-03, -9.838944e-03, -3.127106e-03},
+    Vector3f{2.059314e-03, -6.788109e-03, 7.398276e-03},   Vector3f{6.788109e-03, -6.864380e-03, -6.788109e-03},
+    Vector3f{6.711838e-03, -6.406755e-03, -3.203377e-03},  Vector3f{7.550818e-03, -7.474547e-03, -2.288127e-03},
+};
 
-// // IMUの取り付け姿勢
-// constexpr static std::array<EulerAngleXYZ, NUM_SENSOR> imu_pose_init = {
-//     // Tops
-//     EulerAngleXYZ{0.0, 0.0, -0 * M_PI / 2}, //
-//     EulerAngleXYZ{0.0, 0.0, -1 * M_PI / 2}, //
-//     EulerAngleXYZ{0.0, 0.0, -2 * M_PI / 2}, //
-//     EulerAngleXYZ{0.0, 0.0, -3 * M_PI / 2}, //
+const static std::array<Vector3f, NUM_SENSOR> acc_average = {
+    Vector3f{-2.932209e-02, -3.524635e-01, 1.010655e+01},  Vector3f{3.099764e-01, -1.328470e-01, 9.874364e+00},
+    Vector3f{1.065170e-01, 1.615707e-02, 9.881545e+00},    Vector3f{-4.188870e-02, -1.148947e-01, 1.001679e+01},
+    Vector3f{1.214772e-01, -2.752686e-01, 9.851624e+00},   Vector3f{2.818511e-01, -1.861055e-01, 9.864191e+00},
+    Vector3f{1.011313e-01, 1.077138e-02, 9.830680e+00},    Vector3f{-5.625054e-02, -1.148947e-01, 9.882742e+00},
+    Vector3f{1.855071e-02, -3.722110e-01, 1.000841e+01},   Vector3f{2.160260e-01, -1.753341e-01, 9.964724e+00},
+    Vector3f{7.719489e-02, 3.530619e-02, 9.892316e+00},    Vector3f{-6.762033e-02, -1.256661e-01, 9.953953e+00},
+    Vector3f{3.171573e-02, -3.099764e-01, 9.835467e+00},   Vector3f{2.267974e-01, -2.094435e-01, 9.712793e+00},
+    Vector3f{1.490041e-01, 1.071154e-01, 9.807342e+00},    Vector3f{-1.777278e-01, -1.436184e-01, 1.017118e+01},
+    Vector3f{5.266008e-02, -3.267319e-01, -9.566183e+00},  Vector3f{9.993447e-02, -2.333799e-02, -9.767847e+00},
+    Vector3f{-3.291255e-02, -3.410937e-02, -9.841452e+00}, Vector3f{-7.958853e-02, -1.555866e-01, -9.661928e+00},
+    Vector3f{1.795230e-01, -2.477418e-01, -9.733738e+00},  Vector3f{2.094435e-01, -9.215514e-02, -9.800759e+00},
+    Vector3f{-2.273958e-02, 2.692845e-02, -9.551821e+00},  Vector3f{-1.693500e-01, -1.819167e-01, -9.569175e+00},
+    Vector3f{-2.453481e-02, -3.799904e-01, -9.514121e+00}, Vector3f{2.477418e-01, -9.155674e-02, -9.803752e+00},
+    Vector3f{-3.590460e-03, -5.086485e-02, -9.660731e+00}, Vector3f{-4.308552e-02, -1.023281e-01, -9.682873e+00},
+    Vector3f{-7.539967e-02, -3.105748e-01, -9.503349e+00}, Vector3f{2.878352e-01, 2.064515e-01, -9.722966e+00},
+    Vector3f{-5.924259e-02, -7.659648e-02, -9.649961e+00}, Vector3f{-3.949506e-02, -1.364375e-01, -9.704415e+00},
+};
 
-//     EulerAngleXYZ{0.0, 0.0, -0 * M_PI / 2}, //
-//     EulerAngleXYZ{0.0, 0.0, -1 * M_PI / 2}, //
-//     EulerAngleXYZ{0.0, 0.0, -2 * M_PI / 2}, //
-//     EulerAngleXYZ{0.0, 0.0, -3 * M_PI / 2}, //
+} // namespace xy_inverted_pose
 
-//     EulerAngleXYZ{0.0, 0.0, -0 * M_PI / 2}, //
-//     EulerAngleXYZ{0.0, 0.0, -1 * M_PI / 2}, //
-//     EulerAngleXYZ{0.0, 0.0, -2 * M_PI / 2}, //
-//     EulerAngleXYZ{0.0, 0.0, -3 * M_PI / 2}, //
+namespace z_inverted_pose {
+const static std::array<Vector3f, NUM_SENSOR> gyro_average = {
+    Vector3f{2.288127e-04, -6.483025e-03, 1.372876e-03},   Vector3f{3.813544e-03, -6.025400e-03, 5.338962e-03},
+    Vector3f{5.720316e-03, -5.567775e-03, 2.364398e-03},   Vector3f{1.052538e-02, 4.576253e-04, -1.754230e-03},
+    Vector3f{8.008443e-03, -4.728795e-03, -5.338962e-04},  Vector3f{1.372876e-03, -9.076236e-03, -1.677960e-03},
+    Vector3f{-1.372876e-03, -2.898294e-03, -3.966086e-03}, Vector3f{2.745752e-03, -4.576253e-03, 1.601689e-03},
+    Vector3f{4.347441e-03, -8.466069e-03, 1.296605e-03},   Vector3f{9.228777e-03, -6.330484e-03, -2.364398e-03},
+    Vector3f{-2.211856e-03, -1.838128e-02, 3.966086e-03},  Vector3f{1.067792e-03, -7.550818e-03, 1.601689e-03},
+    Vector3f{-2.059314e-03, -1.487282e-02, 2.822023e-03},  Vector3f{4.271170e-03, -7.779630e-03, -4.423711e-03},
+    Vector3f{1.372876e-03, -8.313526e-03, -1.144063e-03},  Vector3f{9.152506e-04, -1.349995e-02, 5.567775e-03},
+    Vector3f{4.576253e-04, -8.313526e-03, 9.305049e-03},   Vector3f{8.389798e-04, -1.067792e-02, -3.737273e-03},
+    Vector3f{3.813544e-04, -8.847423e-03, 5.567775e-03},   Vector3f{2.669481e-03, -1.693214e-02, -4.271170e-03},
+    Vector3f{-3.050836e-04, -7.550818e-03, 4.805066e-03},  Vector3f{3.050836e-04, -7.322005e-03, -3.889815e-03},
+    Vector3f{-1.601689e-03, -1.205080e-02, -1.449147e-03}, Vector3f{4.652524e-03, -7.703360e-03, 2.593210e-03},
+    Vector3f{1.449147e-03, -8.999965e-03, 7.627089e-05},   Vector3f{-5.338962e-04, -7.932172e-03, -5.872858e-03},
+    Vector3f{7.093193e-03, -1.052538e-02, 5.338962e-04},   Vector3f{1.296605e-03, -9.838944e-03, -3.050836e-03},
+    Vector3f{2.059314e-03, -6.940651e-03, 7.550818e-03},   Vector3f{6.635567e-03, -6.864380e-03, -6.711838e-03},
+    Vector3f{6.635567e-03, -6.635567e-03, -3.203377e-03},  Vector3f{7.703360e-03, -7.398276e-03, -2.211856e-03},
+};
 
-//     EulerAngleXYZ{0.0, 0.0, -0 * M_PI / 2}, //
-//     EulerAngleXYZ{0.0, 0.0, -1 * M_PI / 2}, //
-//     EulerAngleXYZ{0.0, 0.0, -2 * M_PI / 2}, //
-//     EulerAngleXYZ{0.0, 0.0, -3 * M_PI / 2}, //
+const static std::array<Vector3f, NUM_SENSOR> acc_average = {
+    Vector3f{-3.231414e-02, -2.393640e-03, -9.466846e+00}, Vector3f{-6.821875e-02, -1.238709e-01, -9.794177e+00},
+    Vector3f{1.400279e-01, -3.704158e-01, -9.663125e+00},  Vector3f{3.057875e-01, -7.121079e-02, -9.571568e+00},
+    Vector3f{8.557264e-02, 9.514719e-02, -9.820507e+00},   Vector3f{-7.480125e-02, -2.154276e-01, -9.686463e+00},
+    Vector3f{9.095833e-02, -3.267319e-01, -9.822901e+00},  Vector3f{3.153621e-01, -9.754083e-02, -9.741517e+00},
+    Vector3f{-8.377740e-03, -5.864418e-02, -9.584733e+00}, Vector3f{-1.274613e-01, -1.890976e-01, -9.602087e+00},
+    Vector3f{1.095090e-01, -2.998034e-01, -9.677487e+00},  Vector3f{2.525290e-01, -4.787280e-02, -9.715785e+00},
+    Vector3f{6.821875e-02, 9.694242e-02, -9.769044e+00},   Vector3f{-1.214772e-01, -2.363720e-01, -9.888127e+00},
+    Vector3f{2.082467e-01, -2.166244e-01, -9.886930e+00},  Vector3f{2.154276e-01, -1.208788e-01, -9.356739e+00},
+    Vector3f{1.352407e-01, -1.555866e-02, 9.953354e+00},   Vector3f{-8.018694e-02, -1.639643e-01, 9.827688e+00},
+    Vector3f{-1.017297e-02, -3.464794e-01, 9.760666e+00},  Vector3f{3.309208e-01, -1.837119e-01, 9.891718e+00},
+    Vector3f{2.435529e-01, 4.428234e-02, 9.855813e+00},    Vector3f{-1.454136e-01, -1.083122e-01, 9.825294e+00},
+    Vector3f{-3.710142e-02, -3.237398e-01, 1.008082e+01},  Vector3f{1.896960e-01, -2.405608e-01, 1.003713e+01},
+    Vector3f{7.539967e-02, -2.453481e-02, 1.005628e+01},   Vector3f{-8.916309e-02, -7.539967e-02, 9.866585e+00},
+    Vector3f{-5.505372e-02, -3.668253e-01, 9.909072e+00},  Vector3f{3.159605e-01, -1.543898e-01, 9.876758e+00},
+    Vector3f{1.262645e-01, -1.214772e-01, 1.007603e+01},   Vector3f{-1.172884e-01, -2.968114e-01, 9.791783e+00},
+    Vector3f{4.787280e-03, -3.740063e-01, 9.918048e+00},   Vector3f{2.968114e-01, -1.412248e-01, 9.921040e+00},
+};
 
-//     // Bottoms
-//     EulerAngleXYZ{-M_PI, 0.0, -0 * M_PI / 2}, //
-//     EulerAngleXYZ{-M_PI, 0.0, -1 * M_PI / 2}, //
-//     EulerAngleXYZ{-M_PI, 0.0, -2 * M_PI / 2}, //
-//     EulerAngleXYZ{-M_PI, 0.0, -3 * M_PI / 2}, //
+} // namespace z_inverted_pose
 
-//     EulerAngleXYZ{-M_PI, 0.0, -0 * M_PI / 2}, //
-//     EulerAngleXYZ{-M_PI, 0.0, -1 * M_PI / 2}, //
-//     EulerAngleXYZ{-M_PI, 0.0, -2 * M_PI / 2}, //
-//     EulerAngleXYZ{-M_PI, 0.0, -3 * M_PI / 2}, //
+static void calcu_imu_bias_from_3pose_data(std::array<Vector3f, NUM_SENSOR> &gyro_biases,
+                                           std::array<Vector3f, NUM_SENSOR> &acc_biases) {
+    using namespace calibration_data;
 
-//     EulerAngleXYZ{-M_PI, 0.0, -0 * M_PI / 2}, //
-//     EulerAngleXYZ{-M_PI, 0.0, -1 * M_PI / 2}, //
-//     EulerAngleXYZ{-M_PI, 0.0, -2 * M_PI / 2}, //
-//     EulerAngleXYZ{-M_PI, 0.0, -3 * M_PI / 2}, //
+    for (size_t i = 0; i < NUM_SENSOR; i++) {
+        gyro_biases[i].x() = 0.5 * (base_pose::gyro_average[i].x() + xy_inverted_pose::gyro_average[i].x());
+        gyro_biases[i].y() = 0.5 * (base_pose::gyro_average[i].y() + xy_inverted_pose::gyro_average[i].y());
+        gyro_biases[i].z() = 0.5 * (base_pose::gyro_average[i].z() + z_inverted_pose::gyro_average[i].z());
+        acc_biases[i].x() = 0.5 * (base_pose::acc_average[i].x() + xy_inverted_pose::acc_average[i].x());
+        acc_biases[i].y() = 0.5 * (base_pose::acc_average[i].y() + xy_inverted_pose::acc_average[i].y());
+        acc_biases[i].z() = 0.5 * (base_pose::acc_average[i].z() + z_inverted_pose::acc_average[i].z());
+    }
+}
 
-//     EulerAngleXYZ{-M_PI, 0.0, -0 * M_PI / 2}, //
-//     EulerAngleXYZ{-M_PI, 0.0, -1 * M_PI / 2}, //
-//     EulerAngleXYZ{-M_PI, 0.0, -2 * M_PI / 2}, //
-//     EulerAngleXYZ{-M_PI, 0.0, -3 * M_PI / 2}, //
-// };
-
-// static Matrix3f gen_rotate_matrix(const EulerAngleXYZ &angle) {
-//     Matrix3f rot;
-
-//     float cos_alpha = std::cos(angle.alpha);
-//     float sin_alpha = std::sin(angle.alpha);
-//     float cos_beta = std::cos(angle.beta);
-//     float sin_beta = std::sin(angle.beta);
-//     float cos_gamma = std::cos(angle.gamma);
-//     float sin_gamma = std::sin(angle.gamma);
-
-//     rot(0, 0) = cos_gamma * cos_beta;
-//     rot(0, 1) = cos_gamma * sin_beta * sin_alpha - sin_gamma * cos_alpha;
-//     rot(0, 2) = cos_gamma * sin_beta * cos_alpha + sin_gamma * sin_alpha;
-//     rot(1, 0) = sin_gamma * cos_beta;
-//     rot(1, 1) = sin_gamma * sin_beta * sin_alpha + cos_gamma * cos_alpha;
-//     rot(1, 2) = sin_gamma * sin_beta * cos_alpha - cos_gamma * sin_alpha;
-//     rot(2, 0) = -sin_beta;
-//     rot(2, 1) = cos_beta * sin_alpha;
-//     rot(2, 2) = cos_beta * cos_alpha;
-
-//     return rot;
-// }
-
-// static const std::array<Matrix3f, NUM_SENSOR> imu_pose_rot = {
-//     gen_rotate_matrix(imu_pose_init[0]),  //
-//     gen_rotate_matrix(imu_pose_init[1]),  //
-//     gen_rotate_matrix(imu_pose_init[2]),  //
-//     gen_rotate_matrix(imu_pose_init[3]),  //
-//     gen_rotate_matrix(imu_pose_init[4]),  //
-//     gen_rotate_matrix(imu_pose_init[5]),  //
-//     gen_rotate_matrix(imu_pose_init[6]),  //
-//     gen_rotate_matrix(imu_pose_init[7]),  //
-//     gen_rotate_matrix(imu_pose_init[8]),  //
-//     gen_rotate_matrix(imu_pose_init[9]),  //
-//     gen_rotate_matrix(imu_pose_init[10]), //
-//     gen_rotate_matrix(imu_pose_init[11]), //
-//     gen_rotate_matrix(imu_pose_init[12]), //
-//     gen_rotate_matrix(imu_pose_init[13]), //
-//     gen_rotate_matrix(imu_pose_init[14]), //
-//     gen_rotate_matrix(imu_pose_init[15]), //
-
-//     gen_rotate_matrix(imu_pose_init[16]), //
-//     gen_rotate_matrix(imu_pose_init[17]), //
-//     gen_rotate_matrix(imu_pose_init[18]), //
-//     gen_rotate_matrix(imu_pose_init[19]), //
-//     gen_rotate_matrix(imu_pose_init[20]), //
-//     gen_rotate_matrix(imu_pose_init[21]), //
-//     gen_rotate_matrix(imu_pose_init[22]), //
-//     gen_rotate_matrix(imu_pose_init[23]), //
-//     gen_rotate_matrix(imu_pose_init[24]), //
-//     gen_rotate_matrix(imu_pose_init[25]), //
-//     gen_rotate_matrix(imu_pose_init[26]), //
-//     gen_rotate_matrix(imu_pose_init[27]), //
-//     gen_rotate_matrix(imu_pose_init[28]), //
-//     gen_rotate_matrix(imu_pose_init[29]), //
-//     gen_rotate_matrix(imu_pose_init[30]), //
-//     gen_rotate_matrix(imu_pose_init[31]), //
-// };
+} // namespace imu_module::calibration_data

@@ -1,8 +1,8 @@
-#include "lsm6dsr_array_32.hpp"
+#include "lsm6dsr_array.hpp"
 #include "calibration_data.hpp"
 #include "lsm6dsr_reg.hpp"
 
-LSM6DSRStatusTypeDef LSM6DSRArray32::begin() {
+LSM6DSRStatusTypeDef LSM6DSRArray::begin() {
     /* Disable I3C */
     if (i3c_disable_set(LSM6DSR_I3C_DISABLE) != LSM6DSR_OK) {
         return LSM6DSR_ERROR;
@@ -25,7 +25,7 @@ LSM6DSRStatusTypeDef LSM6DSRArray32::begin() {
     }
 
     /* Select default output data rate. */
-    acc_odr = LSM6DSR_XL_ODR_1667Hz;
+    acc_odr = LSM6DSR_XL_ODR_3333Hz;
 
     /* Output data rate selection - power down. */
     if (xl_data_rate_set(LSM6DSR_XL_ODR_OFF) != LSM6DSR_OK) {
@@ -42,14 +42,14 @@ LSM6DSRStatusTypeDef LSM6DSRArray32::begin() {
         return LSM6DSR_ERROR;
     }
 
-    if (xl_filter_lp2_set(PROPERTY_ENABLE) != LSM6DSR_OK) {
-        return LSM6DSR_ERROR;
-    }
+    // if (xl_filter_lp2_set(PROPERTY_ENABLE) != LSM6DSR_OK) {
+    //     return LSM6DSR_ERROR;
+    // }
 
     // acc LPF2 bandwidth
-    if (xl_hp_path_on_out_set(LSM6DSR_LP_ODR_DIV_10) != LSM6DSR_OK) {
-        return LSM6DSR_ERROR;
-    }
+    // if (xl_hp_path_on_out_set(LSM6DSR_LP_ODR_DIV_10) != LSM6DSR_OK) {
+    //     return LSM6DSR_ERROR;
+    // }
 
     /* Select default output data rate. */
     gyro_odr = LSM6DSR_GY_ODR_3333Hz;
@@ -60,19 +60,23 @@ LSM6DSRStatusTypeDef LSM6DSRArray32::begin() {
     }
 
     /* Full scale selection. */
-    if (gy_full_scale_set(LSM6DSR_1000dps) != LSM6DSR_OK) {
+    if (gy_full_scale_set(LSM6DSR_2000dps) != LSM6DSR_OK) {
         return LSM6DSR_ERROR;
     }
 
-    // enable gyro LPF1
-    if (gy_filter_lp1_set(PROPERTY_ENABLE) != LSM6DSR_OK) {
+    if (gy_filter_lp1_set(PROPERTY_DISABLE) != LSM6DSR_OK) {
         return LSM6DSR_ERROR;
     }
 
-    // gyro LPF1 bandwidth
-    if (gy_lp1_bandwidth_set(LSM6DSR_MEDIUM) != LSM6DSR_OK) {
-        return LSM6DSR_ERROR;
-    }
+    // // enable gyro LPF1
+    // if (gy_filter_lp1_set(PROPERTY_ENABLE) != LSM6DSR_OK) {
+    //     return LSM6DSR_ERROR;
+    // }
+
+    // // gyro LPF1 bandwidth
+    // if (gy_lp1_bandwidth_set(LSM6DSR_ULTRA_LIGHT) != LSM6DSR_OK) {
+    //     return LSM6DSR_ERROR;
+    // }
 
     is_acc_enabled_ = 0;
     is_gyro_enabled_ = 0;
@@ -80,7 +84,7 @@ LSM6DSRStatusTypeDef LSM6DSRArray32::begin() {
     return LSM6DSR_OK;
 }
 
-LSM6DSRStatusTypeDef LSM6DSRArray32::who_am_i(std::array<uint8_t, NUM_SENSOR> &result) {
+LSM6DSRStatusTypeDef LSM6DSRArray::who_am_i(std::array<uint8_t, NUM_SENSOR> &result) {
     if (read_reg(LSM6DSR_WHO_AM_I, mem_ws_.ptr(), 1) != 0) {
         return LSM6DSR_ERROR;
     }
@@ -100,7 +104,7 @@ LSM6DSRStatusTypeDef LSM6DSRArray32::who_am_i(std::array<uint8_t, NUM_SENSOR> &r
 
 #define structcpy(val_t) std::memcpy((uint8_t *)&val_t, &mem_ws_.data[0][0], sizeof(val_t))
 
-LSM6DSRStatusTypeDef LSM6DSRArray32::i3c_disable_set(uint8_t val) {
+LSM6DSRStatusTypeDef LSM6DSRArray::i3c_disable_set(uint8_t val) {
     lsm6dsr_ctrl9_xl_t ctrl9_xl;
     lsm6dsr_i3c_bus_avb_t i3c_bus_avb;
     int32_t ret;
@@ -123,7 +127,7 @@ LSM6DSRStatusTypeDef LSM6DSRArray32::i3c_disable_set(uint8_t val) {
     return (ret == 0) ? LSM6DSR_OK : LSM6DSR_ERROR;
 }
 
-LSM6DSRStatusTypeDef LSM6DSRArray32::auto_increment_set(uint8_t val) {
+LSM6DSRStatusTypeDef LSM6DSRArray::auto_increment_set(uint8_t val) {
     lsm6dsr_ctrl3_c_t ctrl3_c;
     int32_t ret;
 
@@ -136,7 +140,7 @@ LSM6DSRStatusTypeDef LSM6DSRArray32::auto_increment_set(uint8_t val) {
     return (ret == 0) ? LSM6DSR_OK : LSM6DSR_ERROR;
 }
 
-LSM6DSRStatusTypeDef LSM6DSRArray32::block_data_update_set(uint8_t val) {
+LSM6DSRStatusTypeDef LSM6DSRArray::block_data_update_set(uint8_t val) {
     lsm6dsr_ctrl3_c_t ctrl3_c;
     int32_t ret;
 
@@ -149,7 +153,7 @@ LSM6DSRStatusTypeDef LSM6DSRArray32::block_data_update_set(uint8_t val) {
     return (ret == 0) ? LSM6DSR_OK : LSM6DSR_ERROR;
 }
 
-LSM6DSRStatusTypeDef LSM6DSRArray32::fifo_mode_set(lsm6dsr_fifo_mode_t val) {
+LSM6DSRStatusTypeDef LSM6DSRArray::fifo_mode_set(lsm6dsr_fifo_mode_t val) {
     lsm6dsr_fifo_ctrl4_t fifo_ctrl4;
     int32_t ret;
 
@@ -162,7 +166,7 @@ LSM6DSRStatusTypeDef LSM6DSRArray32::fifo_mode_set(lsm6dsr_fifo_mode_t val) {
     return (ret == 0) ? LSM6DSR_OK : LSM6DSR_ERROR;
 }
 
-LSM6DSRStatusTypeDef LSM6DSRArray32::xl_data_rate_set(lsm6dsr_odr_xl_t val) {
+LSM6DSRStatusTypeDef LSM6DSRArray::xl_data_rate_set(lsm6dsr_odr_xl_t val) {
     lsm6dsr_odr_xl_t odr_xl = val;
     lsm6dsr_emb_fsm_enable_t fsm_enable;
     lsm6dsr_fsm_odr_t fsm_odr;
@@ -241,7 +245,7 @@ LSM6DSRStatusTypeDef LSM6DSRArray32::xl_data_rate_set(lsm6dsr_odr_xl_t val) {
     return (ret == 0) ? LSM6DSR_OK : LSM6DSR_ERROR;
 }
 
-LSM6DSRStatusTypeDef LSM6DSRArray32::xl_full_scale_set(lsm6dsr_fs_xl_t val) {
+LSM6DSRStatusTypeDef LSM6DSRArray::xl_full_scale_set(lsm6dsr_fs_xl_t val) {
     lsm6dsr_ctrl1_xl_t ctrl1_xl;
     int32_t ret;
 
@@ -270,7 +274,7 @@ LSM6DSRStatusTypeDef LSM6DSRArray32::xl_full_scale_set(lsm6dsr_fs_xl_t val) {
     return (ret == 0) ? LSM6DSR_OK : LSM6DSR_ERROR;
 }
 
-LSM6DSRStatusTypeDef LSM6DSRArray32::xl_filter_lp2_set(uint8_t val) {
+LSM6DSRStatusTypeDef LSM6DSRArray::xl_filter_lp2_set(uint8_t val) {
     lsm6dsr_ctrl1_xl_t ctrl1_xl;
     int32_t ret;
 
@@ -283,7 +287,7 @@ LSM6DSRStatusTypeDef LSM6DSRArray32::xl_filter_lp2_set(uint8_t val) {
     return (ret == 0) ? LSM6DSR_OK : LSM6DSR_ERROR;
 }
 
-LSM6DSRStatusTypeDef LSM6DSRArray32::xl_hp_path_on_out_set(lsm6dsr_hp_slope_xl_en_t val) {
+LSM6DSRStatusTypeDef LSM6DSRArray::xl_hp_path_on_out_set(lsm6dsr_hp_slope_xl_en_t val) {
     lsm6dsr_ctrl8_xl_t ctrl8_xl;
     int32_t ret;
 
@@ -298,7 +302,7 @@ LSM6DSRStatusTypeDef LSM6DSRArray32::xl_hp_path_on_out_set(lsm6dsr_hp_slope_xl_e
     return (ret == 0) ? LSM6DSR_OK : LSM6DSR_ERROR;
 }
 
-LSM6DSRStatusTypeDef LSM6DSRArray32::gy_data_rate_set(lsm6dsr_odr_g_t val) {
+LSM6DSRStatusTypeDef LSM6DSRArray::gy_data_rate_set(lsm6dsr_odr_g_t val) {
     lsm6dsr_odr_g_t odr_gy = val;
     lsm6dsr_emb_fsm_enable_t fsm_enable;
     lsm6dsr_fsm_odr_t fsm_odr;
@@ -376,7 +380,7 @@ LSM6DSRStatusTypeDef LSM6DSRArray32::gy_data_rate_set(lsm6dsr_odr_g_t val) {
     return (ret == 0) ? LSM6DSR_OK : LSM6DSR_ERROR;
 }
 
-LSM6DSRStatusTypeDef LSM6DSRArray32::gy_full_scale_set(lsm6dsr_fs_g_t val) {
+LSM6DSRStatusTypeDef LSM6DSRArray::gy_full_scale_set(lsm6dsr_fs_g_t val) {
     lsm6dsr_ctrl2_g_t ctrl2_g;
     int32_t ret;
 
@@ -410,7 +414,7 @@ LSM6DSRStatusTypeDef LSM6DSRArray32::gy_full_scale_set(lsm6dsr_fs_g_t val) {
     return (ret == 0) ? LSM6DSR_OK : LSM6DSR_ERROR;
 }
 
-LSM6DSRStatusTypeDef LSM6DSRArray32::gy_filter_lp1_set(uint8_t val) {
+LSM6DSRStatusTypeDef LSM6DSRArray::gy_filter_lp1_set(uint8_t val) {
     lsm6dsr_ctrl4_c_t ctrl4_c;
     int32_t ret;
 
@@ -423,7 +427,7 @@ LSM6DSRStatusTypeDef LSM6DSRArray32::gy_filter_lp1_set(uint8_t val) {
     return (ret == 0) ? LSM6DSR_OK : LSM6DSR_ERROR;
 }
 
-LSM6DSRStatusTypeDef LSM6DSRArray32::gy_lp1_bandwidth_set(lsm6dsr_ftype_t val) {
+LSM6DSRStatusTypeDef LSM6DSRArray::gy_lp1_bandwidth_set(lsm6dsr_ftype_t val) {
     lsm6dsr_ctrl6_c_t ctrl6_c;
     int32_t ret;
 
@@ -436,7 +440,7 @@ LSM6DSRStatusTypeDef LSM6DSRArray32::gy_lp1_bandwidth_set(lsm6dsr_ftype_t val) {
     return (ret == 0) ? LSM6DSR_OK : LSM6DSR_ERROR;
 }
 
-LSM6DSRStatusTypeDef LSM6DSRArray32::fsm_enable_get(lsm6dsr_emb_fsm_enable_t *val) {
+LSM6DSRStatusTypeDef LSM6DSRArray::fsm_enable_get(lsm6dsr_emb_fsm_enable_t *val) {
     int32_t ret;
 
     ret = mem_bank_set(LSM6DSR_EMBEDDED_FUNC_BANK);
@@ -454,7 +458,7 @@ LSM6DSRStatusTypeDef LSM6DSRArray32::fsm_enable_get(lsm6dsr_emb_fsm_enable_t *va
     return (ret == 0) ? LSM6DSR_OK : LSM6DSR_ERROR;
 }
 
-LSM6DSRStatusTypeDef LSM6DSRArray32::mem_bank_set(lsm6dsr_reg_access_t val) {
+LSM6DSRStatusTypeDef LSM6DSRArray::mem_bank_set(lsm6dsr_reg_access_t val) {
     lsm6dsr_func_cfg_access_t func_cfg_access;
     int32_t ret;
 
@@ -467,7 +471,7 @@ LSM6DSRStatusTypeDef LSM6DSRArray32::mem_bank_set(lsm6dsr_reg_access_t val) {
     return (ret == 0) ? LSM6DSR_OK : LSM6DSR_ERROR;
 }
 
-LSM6DSRStatusTypeDef LSM6DSRArray32::fsm_data_rate_get(lsm6dsr_fsm_odr_t *val) {
+LSM6DSRStatusTypeDef LSM6DSRArray::fsm_data_rate_get(lsm6dsr_fsm_odr_t *val) {
     lsm6dsr_emb_func_odr_cfg_b_t emb_func_odr_cfg_b;
     int32_t ret;
 
@@ -500,7 +504,7 @@ LSM6DSRStatusTypeDef LSM6DSRArray32::fsm_data_rate_get(lsm6dsr_fsm_odr_t *val) {
     return (ret == 0) ? LSM6DSR_OK : LSM6DSR_ERROR;
 }
 
-LSM6DSRStatusTypeDef LSM6DSRArray32::enable_acc() {
+LSM6DSRStatusTypeDef LSM6DSRArray::enable_acc() {
     /* Check if the component is already enabled */
     if (is_acc_enabled_ == true) {
         return LSM6DSR_OK;
@@ -516,7 +520,7 @@ LSM6DSRStatusTypeDef LSM6DSRArray32::enable_acc() {
     return LSM6DSR_OK;
 }
 
-LSM6DSRStatusTypeDef LSM6DSRArray32::update_acc_axes() {
+LSM6DSRStatusTypeDef LSM6DSRArray::update_acc_axes() {
     if (read_reg(LSM6DSR_OUTX_L_A, mem_ws_.ptr(), 6) != 0) {
         return LSM6DSR_ERROR;
     }
@@ -526,23 +530,25 @@ LSM6DSRStatusTypeDef LSM6DSRArray32::update_acc_axes() {
         sensor_data_[i].acc.raw_value[1] = (int16_t)((mem_ws_.data[i][3] << 8) | mem_ws_.data[i][2]);
         sensor_data_[i].acc.raw_value[2] = (int16_t)((mem_ws_.data[i][5] << 8) | mem_ws_.data[i][4]);
 
-        sensor_data_[i].acc.value[0] = sensor_data_[i].acc.raw_value[0] * acc_sensitivity_;
-        sensor_data_[i].acc.value[1] = sensor_data_[i].acc.raw_value[1] * acc_sensitivity_;
-        sensor_data_[i].acc.value[2] = sensor_data_[i].acc.raw_value[2] * acc_sensitivity_;
+        // sensor_data_[i].acc.raw_value[0] = (int32_t)((mem_ws_.data[i][1] << 8) | mem_ws_.data[i][0]) < 16;
+        // sensor_data_[i].acc.raw_value[1] = (int32_t)((mem_ws_.data[i][3] << 8) | mem_ws_.data[i][2]) < 16;
+        // sensor_data_[i].acc.raw_value[2] = (int32_t)((mem_ws_.data[i][5] << 8) | mem_ws_.data[i][4]) < 16;
+
+        // sensor_data_[i].acc.value[0] = sensor_data_[i].acc.raw_value[0] * acc_sensitivity_;
+        // sensor_data_[i].acc.value[1] = sensor_data_[i].acc.raw_value[1] * acc_sensitivity_;
+        // sensor_data_[i].acc.value[2] = sensor_data_[i].acc.raw_value[2] * acc_sensitivity_;
     }
 
     return LSM6DSR_OK;
 }
 
-// LSM6DSRArray32::Vector3f LSM6DSRArray32::get_acc_axes(size_t index) {
-//     return sensor_data_[index].acc.value - acc_biases[index];
+std::array<int16_t, 3> LSM6DSRArray::get_acc_axes_raw(size_t index) { return sensor_data_[index].acc.raw_value; }
+
+// LSM6DSRArray::Vector3f LSM6DSRArray::calcu_scaled_acc_axes(size_t index) {
+//     return sensor_data_[index].acc.raw_value * acc_sensitivity_;
 // }
 
-LSM6DSRArray32::Vector3f LSM6DSRArray32::get_acc_axes(size_t index) { return sensor_data_[index].acc.value; }
-
-std::array<int16_t, 3> LSM6DSRArray32::get_acc_axes_raw(size_t index) { return sensor_data_[index].acc.raw_value; }
-
-LSM6DSRStatusTypeDef LSM6DSRArray32::enable_gyro() {
+LSM6DSRStatusTypeDef LSM6DSRArray::enable_gyro() {
     /* Check if the component is already enabled */
     if (is_gyro_enabled_ == 1U) {
         return LSM6DSR_OK;
@@ -558,7 +564,7 @@ LSM6DSRStatusTypeDef LSM6DSRArray32::enable_gyro() {
     return LSM6DSR_OK;
 }
 
-LSM6DSRStatusTypeDef LSM6DSRArray32::update_gyro_axes() {
+LSM6DSRStatusTypeDef LSM6DSRArray::update_gyro_axes() {
     if (read_reg(LSM6DSR_OUTX_L_G, mem_ws_.ptr(), 6) != 0) {
         return LSM6DSR_ERROR;
     }
@@ -568,34 +574,36 @@ LSM6DSRStatusTypeDef LSM6DSRArray32::update_gyro_axes() {
         sensor_data_[i].gyro.raw_value[1] = (int16_t)((mem_ws_.data[i][3] << 8) | mem_ws_.data[i][2]);
         sensor_data_[i].gyro.raw_value[2] = (int16_t)((mem_ws_.data[i][5] << 8) | mem_ws_.data[i][4]);
 
-        sensor_data_[i].gyro.value[0] = sensor_data_[i].gyro.raw_value[0] * gyro_sensitivity_;
-        sensor_data_[i].gyro.value[1] = sensor_data_[i].gyro.raw_value[1] * gyro_sensitivity_;
-        sensor_data_[i].gyro.value[2] = sensor_data_[i].gyro.raw_value[2] * gyro_sensitivity_;
+        // sensor_data_[i].gyro.raw_value[0] = (int32_t)((mem_ws_.data[i][1] << 8) | mem_ws_.data[i][0]) << 16;
+        // sensor_data_[i].gyro.raw_value[1] = (int32_t)((mem_ws_.data[i][3] << 8) | mem_ws_.data[i][2]) << 16;
+        // sensor_data_[i].gyro.raw_value[2] = (int32_t)((mem_ws_.data[i][5] << 8) | mem_ws_.data[i][4]) << 16;
+
+        // sensor_data_[i].gyro.value[0] = sensor_data_[i].gyro.raw_value[0] * gyro_sensitivity_;
+        // sensor_data_[i].gyro.value[1] = sensor_data_[i].gyro.raw_value[1] * gyro_sensitivity_;
+        // sensor_data_[i].gyro.value[2] = sensor_data_[i].gyro.raw_value[2] * gyro_sensitivity_;
     }
 
     return LSM6DSR_OK;
 }
 
-// LSM6DSRArray32::Vector3f LSM6DSRArray32::get_gyro_axes(size_t index) {
-//     return sensor_data_[index].gyro.value - gyro_bias[index];
+std::array<int16_t, 3> LSM6DSRArray::get_gyro_axes_raw(size_t index) { return sensor_data_[index].gyro.raw_value; }
+
+// LSM6DSRArray::Vector3f LSM6DSRArray::calcu_scaled_gyro_axes(size_t index) {
+//     return sensor_data_[index].gyro.raw_value * gyro_sensitivity_;
 // }
 
-LSM6DSRArray32::Vector3f LSM6DSRArray32::get_gyro_axes(size_t index) { return sensor_data_[index].gyro.value; }
-
-std::array<int16_t, 3> LSM6DSRArray32::get_gyro_axes_raw(size_t index) { return sensor_data_[index].gyro.raw_value; }
-
-LSM6DSRStatusTypeDef LSM6DSRArray32::update_temperature() {
+LSM6DSRStatusTypeDef LSM6DSRArray::update_temperature() {
     if (read_reg(LSM6DSR_OUT_TEMP_L, mem_ws_.ptr(), 2) != 0) {
         return LSM6DSR_ERROR;
     }
 
     for (size_t i = 0; i < NUM_SENSOR; i++) {
         sensor_data_[i].temperature.raw_value = (int16_t)((mem_ws_.data[i][1] << 8) | mem_ws_.data[i][0]);
-        sensor_data_[i].temperature.value = sensor_data_[i].temperature.raw_value / 256.0f + 25.0f;
+        // sensor_data_[i].temperature.value = sensor_data_[i].temperature.raw_value / 256.0f + 25.0f;
     }
 
     return LSM6DSR_OK;
 }
 
-float LSM6DSRArray32::get_temperature(size_t index) { return sensor_data_[index].temperature.value; }
-int16_t LSM6DSRArray32::get_temperature_raw(size_t index) { return sensor_data_[index].temperature.raw_value; }
+// float LSM6DSRArray::get_temperature(size_t index) { return array_data_.temperature[index] / 256.0f + 25.0f; }
+int16_t LSM6DSRArray::get_temperature_raw(size_t index) { return sensor_data_[index].temperature.raw_value; }

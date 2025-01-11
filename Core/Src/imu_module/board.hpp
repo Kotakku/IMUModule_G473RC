@@ -1,13 +1,15 @@
 #pragma once
 
+#include "main.h"
+
 #include "imu_fusion.hpp"
-#include "lsm6dsr_array_32.hpp"
+#include "lsm6dsr_array.hpp"
 #include "stmbed/digital_in.hpp"
 #include "stmbed/digital_out.hpp"
+#include "stmbed/spi_slave.hpp"
 #include "stmbed/stdio_support.hpp"
 #include "stmbed/ticker.hpp"
 #include "stmbed/uart.hpp"
-#include "stmbed/spi_slave.hpp"
 
 extern UART_HandleTypeDef huart2; // VCP
 extern TIM_HandleTypeDef htim16;  // 2khz
@@ -30,7 +32,8 @@ public:
         return instance;
     }
 
-    static void enable_std_printf() { stmbed::enable_std_printf(&huart2); }
+    static void enable_std_printf() { /*stmbed::enable_std_printf(&huart2);*/
+    }
 
     DigitalOut led1{PA0};
     DigitalOut led2{PA1};
@@ -80,8 +83,8 @@ public:
 
     const float ticker_period = 0.0005f; // [s]
 
-    LSM6DSRArray32 imu{imu_mosi, imu_misos, imu_clk, imu_cs};
-    IMUFusion imu_fusion{imu, 2*raw_gyro_var, 4, 2*raw_acc_var, 4};
+    LSM6DSRArray imu{imu_mosi, imu_misos, imu_clk, imu_cs};
+    IMUFusion imu_fusion{imu, 3 * std::sqrt(raw_gyro_var), 4 * 3 * std::sqrt(raw_acc_var), ticker_period};
 
     SPISlave spi_slave{&hspi1};
 };

@@ -20,3 +20,15 @@ After reading 12 bytes, convert according to the following
 
 Linear acceleration sensitivity: 0.061mg/LSB  
 Angular rate sensitivity: 35mdps/LSB
+
+## キャリブレーション方法
+
+基板を固定した状態で、以下の3方向でimu_bias_calibration関数を実行する  
+- 姿勢a: 基準となる任意の姿勢
+- 姿勢b: 姿勢aからx軸とy軸が逆になる方向
+- 姿勢c: 姿勢aからz軸が逆になる方向
+
+imu_bias_calibration関数を実行するとUARTで結果が出力されるのでcalibration_data.hppにコピーする  
+- 姿勢a -> imu_module::calibration_data::base_pose
+- 姿勢b -> imu_module::calibration_data::xy_inverted_pose
+- 姿勢c -> imu_module::calibration_data::z_inverted_pose
